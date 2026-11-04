@@ -21,7 +21,19 @@
   <div id="app">
     <div id="editorBox">
       <span id="mathField"></span>
-      <div id="texNotice" class="hidden">這個式子含有視覺編輯不支援的結構（矩陣、分段函數等），請直接在下方 LaTeX 修改。</div>
+      <div id="gridBox" class="hidden">
+        <div class="gridHead">
+          <span id="gridTitle"></span>
+          <button type="button" id="gridAddRow" title="在目前這一列下面加一列（格子裡按 Enter 也可以）">＋列</button>
+          <button type="button" id="gridDelRow" title="刪除游標所在的列">－列</button>
+          <button type="button" id="gridAddCol" title="在目前這一欄右邊加一欄">＋欄</button>
+          <button type="button" id="gridDelCol" title="刪除游標所在的欄">－欄</button>
+          <button type="button" id="gridRemove" class="danger" title="把整個矩陣／大括號刪掉">刪除整個</button>
+        </div>
+        <table id="gridTable"></table>
+        <p class="hint">Enter 加一列；方向鍵換格子；空白的列按 Backspace 就會刪掉。</p>
+      </div>
+      <div id="texNotice" class="hidden">這個式子含有視覺編輯不支援的結構（弧、方框等），請直接在下方 LaTeX 修改。</div>
     </div>
 
     <div id="tabs">

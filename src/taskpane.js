@@ -61,11 +61,13 @@
       { l: 'lim', seq: [['w', '\\lim'], ['cmd', '_']], wide: true }, { l: 'exp', w: '\\exp ', wide: true },
       { l: 'f(x)', w: 'f\\left(x\\right)', wide: true }, { l: "f′(x)", w: "f'\\left(x\\right)", wide: true }
     ],
-    [ // 進階：MathQuill 不支援 → LaTeX
-      { l: '分段函數', tex: 'f(x)=\\begin{cases}x^2 & x\\ge 0\\\\-x & x<0\\end{cases}', wide: true },
-      { l: '聯立方程式', tex: '\\begin{cases}x+y=3\\\\x-y=1\\end{cases}', wide: true },
-      { l: '矩陣', tex: '\\begin{bmatrix}a & b\\\\c & d\\end{bmatrix}', wide: true },
-      { l: '行列式', tex: '\\begin{vmatrix}a & b\\\\c & d\\end{vmatrix}', wide: true },
+    [ // 進階：grid 用格子編輯；tex 是 MathQuill 不支援、只能用 LaTeX 的
+      { l: '分段函數', grid: { env: 'cases', rows: 2, cols: 2, prefix: 'f(x)=' },
+        tex: 'f(x)=\\begin{cases}x^2 & x\\ge 0\\\\-x & x<0\\end{cases}', wide: true },
+      { l: '聯立方程式', grid: { env: 'cases', rows: 2, cols: 1 }, tex: '\\begin{cases}x+y=3\\\\x-y=1\\end{cases}', wide: true },
+      { l: '矩陣 [ ]', grid: { env: 'bmatrix', rows: 2, cols: 2 }, tex: '\\begin{bmatrix}a & b\\\\c & d\\end{bmatrix}', wide: true },
+      { l: '矩陣 ( )', grid: { env: 'pmatrix', rows: 2, cols: 2 }, tex: '\\begin{pmatrix}a & b\\\\c & d\\end{pmatrix}', wide: true },
+      { l: '行列式', grid: { env: 'vmatrix', rows: 2, cols: 2 }, tex: '\\begin{vmatrix}a & b\\\\c & d\\end{vmatrix}', wide: true },
       { l: '弧 AB', tex: '\\overparen{AB}', wide: true },
       { l: '方框', tex: '\\boxed{x}', wide: true },
       { l: '組合 (n k)', cmd: '\\binom', wide: true },
@@ -74,7 +76,21 @@
     ]
   ];
 
+  // 可以用格子編輯的環境；l / r 是格子左右畫的括號
+  var GRID_ENVS = {
+    cases: { name: '大括號（聯立、分段）', l: '{', r: '' },
+    bmatrix: { name: '矩陣', l: '[', r: ']' },
+    pmatrix: { name: '矩陣', l: '(', r: ')' },
+    Bmatrix: { name: '矩陣', l: '{', r: '}' },
+    vmatrix: { name: '行列式', l: '|', r: '|' },
+    Vmatrix: { name: '行列式', l: '‖', r: '‖' },
+    matrix: { name: '矩陣（無括號）', l: '', r: '' },
+    aligned: { name: '多行對齊', l: '', r: '' }
+  };
+
   var mq = null, mf = null, texMode = false, syncing = false;
+  var grid = null;   // { env, cells: [[MathField]], r, c }：目前的格子與最後停留的格子
+  var active = null; // 符號面板寫入的編輯框（主編輯框或某一格）
   var $ = function (id) { return document.getElementById(id); };
 
   // ---------- 工具 ----------
@@ -99,48 +115,250 @@
   // ---------- 編輯器 ----------
   function currentLatex() {
     if (texMode || !mf) return $('latex').value;
-    return mf.latex();
+    return mf.latex() + (grid ? gridLatex() : '');
   }
 
   function setTexMode(on) {
     texMode = on;
     $('texNotice').className = on ? '' : 'hidden';
-    $('mathField').style.opacity = on ? '0.35' : '';
+    $('mathField').style.opacity = $('gridBox').style.opacity = on ? '0.35' : '';
     if (on) $('texBox').setAttribute('open', 'open');
+  }
+
+  // 放進視覺編輯器（必要時加格子）；放不進去回傳 false
+  function loadVisual(latex) {
+    var g = splitEnv(latex);
+    if (g) {
+      if (TEX_ONLY.test(g.prefix) || TEX_ONLY.test(g.rows.join(' '))) g = null;
+      else {
+        mf.latex(g.prefix);
+        if ((g.prefix.replace(/\s/g, '') && !mf.latex()) || !makeGrid(g.env, g.rows)) g = null;
+        else return true;
+      }
+      if (!g) { removeGrid(); mf.latex(''); return false; }
+    }
+    removeGrid();
+    if (TEX_ONLY.test(latex)) { mf.latex(''); return false; }
+    mf.latex(latex);
+    // MathQuill 讀不懂時會變空白
+    return !latex.replace(/\s/g, '') || !!mf.latex();
   }
 
   function setLatex(latex) {
     syncing = true;
     $('latex').value = latex;
-    if (mf) {
-      if (TEX_ONLY.test(latex)) {
-        mf.latex('');
-        setTexMode(true);
-      } else {
-        mf.latex(latex);
-        // MathQuill 讀不懂時會變空白
-        setTexMode(!!latex && !mf.latex());
-      }
-    } else setTexMode(true);
+    setTexMode(mf ? !loadVisual(latex) : true);
     syncing = false;
   }
 
   function onMathEdit() {
     if (syncing || texMode) return;
-    $('latex').value = mf.latex();
+    $('latex').value = currentLatex();
   }
 
   function onLatexInput() {
     if (!mf) return;
-    var v = $('latex').value;
-    if (TEX_ONLY.test(v)) { setTexMode(true); return; }
     syncing = true;
-    mf.latex(v);
+    var ok = loadVisual($('latex').value);
     syncing = false;
-    setTexMode(!!v && !mf.latex());
+    setTexMode(!ok);
+  }
+
+  // ---------- 格子（矩陣、聯立方程式、分段函數）----------
+  // MathQuill 不支援 \begin…\end，改成一格一個小編輯框，列、欄用按鈕增刪
+
+  // 'f(x)=\begin{cases}a & b\\c & d\end{cases}' → { prefix, env, rows: [['a','b'],['c','d']] }
+  function splitEnv(latex) {
+    var m = /\\begin\{([A-Za-z]+)\}/.exec(latex);
+    if (!m || !GRID_ENVS[m[1]]) return null;
+    var env = m[1], start = m.index + m[0].length, endTag = '\\end{' + env + '}';
+    var end = latex.lastIndexOf(endTag);
+    if (end < start) return null;
+    var body = latex.slice(start, end);
+    // 巢狀環境、後面還有東西：交給 LaTeX 編輯
+    if (/\\begin\{/.test(body) || latex.slice(end + endTag.length).replace(/\s/g, '')) return null;
+    var rows = [[]], cell = '', depth = 0, i, j;
+    for (i = 0; i < body.length; i++) {
+      var ch = body.charAt(i);
+      if (ch === '\\') {
+        if (depth === 0 && body.charAt(i + 1) === '\\') { rows[rows.length - 1].push(cell); rows.push([]); cell = ''; }
+        else cell += ch + body.charAt(i + 1);
+        i++;
+        continue;
+      }
+      if (ch === '{') depth++;
+      else if (ch === '}') depth--;
+      else if (ch === '&' && depth === 0) { rows[rows.length - 1].push(cell); cell = ''; continue; }
+      cell += ch;
+    }
+    rows[rows.length - 1].push(cell);
+    var last = rows[rows.length - 1];
+    if (rows.length > 1 && last.length === 1 && !last[0].replace(/\s/g, '')) rows.pop(); // 結尾多一個 \\
+    var cols = 1;
+    for (i = 0; i < rows.length; i++) {
+      for (j = 0; j < rows[i].length; j++) rows[i][j] = rows[i][j].replace(/^\s+|\s+$/g, '');
+      cols = Math.max(cols, rows[i].length);
+    }
+    for (i = 0; i < rows.length; i++) while (rows[i].length < cols) rows[i].push('');
+    return { prefix: latex.slice(0, m.index), env: env, rows: rows };
+  }
+
+  function gridLatex() {
+    var rows = [];
+    for (var i = 0; i < grid.cells.length; i++) {
+      var r = [];
+      for (var j = 0; j < grid.cells[i].length; j++) r.push(grid.cells[i][j].latex());
+      rows.push(r.join(' & '));
+    }
+    return '\\begin{' + grid.env + '}' + rows.join('\\\\') + '\\end{' + grid.env + '}';
+  }
+
+  function snapshot() {
+    var rows = [];
+    for (var i = 0; i < grid.cells.length; i++) {
+      rows.push([]);
+      for (var j = 0; j < grid.cells[i].length; j++) rows[i].push(grid.cells[i][j].latex());
+    }
+    return rows;
+  }
+
+  function emptyRows(r, c) {
+    var rows = [];
+    for (var i = 0; i < r; i++) { rows.push([]); for (var j = 0; j < c; j++) rows[i].push(''); }
+    return rows;
+  }
+
+  function bracketCell(tr, chr, n) {
+    var td = tr.insertCell(-1);
+    td.rowSpan = n;
+    td.className = 'br';
+    td.style.fontSize = (n * 34) + 'px';
+    td.textContent = chr;
+  }
+
+  function fieldConfig(handlers) {
+    return {
+      spaceBehavesLikeTab: false,
+      leftRightIntoCmdGoes: 'up',
+      restrictMismatchedBrackets: true,
+      sumStartsWithNEquals: true,
+      supSubsRequireOperand: true,
+      charsThatBreakOutOfSupSub: '+-=<>',
+      autoSubscriptNumerals: false,
+      autoCommands: 'pi theta sqrt sum prod int alpha beta gamma delta lambda mu sigma omega phi infty pm times div le ge ne approx angle',
+      autoOperatorNames: 'sin cos tan cot sec csc log ln lim exp max min',
+      handlers: handlers
+    };
+  }
+
+  // 每一格：Enter 加一列、方向鍵換格、在空白列開頭按 Backspace 刪掉這一列
+  function cellHandlers(i, j) {
+    return {
+      edit: onMathEdit,
+      enter: function () { addRow(i + 1); },
+      moveOutOf: function (dir) {
+        var cols = grid.cells[0].length;
+        var k = i * cols + j + (dir === mq.L ? -1 : 1);
+        if (k >= 0 && k < grid.cells.length * cols) focusCell(Math.floor(k / cols), k % cols);
+        else if (dir === mq.L) mf.focus();
+      },
+      upOutOf: function () { if (i > 0) focusCell(i - 1, j); else mf.focus(); },
+      downOutOf: function () { if (i < grid.cells.length - 1) focusCell(i + 1, j); },
+      deleteOutOf: function (dir) {
+        if (dir !== mq.L) return;
+        var row = grid.cells[i];
+        for (var k = 0; k < row.length; k++) if (row[k].latex()) { if (j > 0) focusCell(i, j - 1); return; }
+        if (grid.cells.length > 1) { delRow(i); focusCell(Math.max(0, i - 1), grid.cells[0].length - 1); }
+        else { removeGrid(); onMathEdit(); mf.focus(); }
+      }
+    };
+  }
+
+  // 依 rows（LaTeX 字串二維陣列）重畫格子；有格子 MathQuill 讀不懂就回傳 false
+  function makeGrid(env, rows) {
+    var table = $('gridTable'), info = GRID_ENVS[env], ok = true, was = syncing;
+    syncing = true;
+    table.innerHTML = '';
+    grid = { env: env, cells: [], r: 0, c: 0 };
+    for (var i = 0; i < rows.length; i++) {
+      var tr = table.insertRow(-1);
+      if (i === 0 && info.l) bracketCell(tr, info.l, rows.length);
+      grid.cells.push([]);
+      for (var j = 0; j < rows[i].length; j++) {
+        var span = document.createElement('span');
+        span.className = 'cell';
+        tr.insertCell(-1).appendChild(span);
+        var f = mq.MathField(span, fieldConfig(cellHandlers(i, j)));
+        f.latex(rows[i][j]);
+        if (rows[i][j].replace(/\s/g, '') && !f.latex()) ok = false;
+        span.addEventListener('focusin', (function (r, c, fld) {
+          return function () { grid.r = r; grid.c = c; active = fld; };
+        })(i, j, f));
+        grid.cells[i].push(f);
+      }
+      if (i === 0 && info.r) bracketCell(tr, info.r, rows.length);
+    }
+    $('gridTitle').textContent = info.name;
+    $('gridAddCol').className = $('gridDelCol').className = (env === 'cases' ? 'hidden' : '');
+    $('gridBox').className = '';
+    syncing = was;
+    return ok;
+  }
+
+  function removeGrid() {
+    grid = null;
+    active = mf;
+    $('gridTable').innerHTML = '';
+    $('gridBox').className = 'hidden';
+  }
+
+  function focusCell(r, c) {
+    if (!grid) return;
+    r = Math.max(0, Math.min(r, grid.cells.length - 1));
+    c = Math.max(0, Math.min(c, grid.cells[r].length - 1));
+    grid.cells[r][c].focus();
+    grid.r = r; grid.c = c; active = grid.cells[r][c];
+  }
+
+  function regrid(rows, r, c) {
+    if (!rows.length || !rows[0].length) { removeGrid(); onMathEdit(); mf.focus(); return; }
+    makeGrid(grid.env, rows);
+    onMathEdit();
+    focusCell(r, c);
+  }
+  function addRow(at) {
+    var rows = snapshot();
+    rows.splice(at, 0, emptyRows(1, rows[0].length)[0]);
+    regrid(rows, at, 0);
+  }
+  function delRow(at) {
+    var rows = snapshot();
+    rows.splice(at, 1);
+    regrid(rows, at, grid.c);
+  }
+  function addCol(at) {
+    var rows = snapshot();
+    for (var i = 0; i < rows.length; i++) rows[i].splice(at, 0, '');
+    regrid(rows, grid.r, at);
+  }
+  function delCol(at) {
+    var rows = snapshot();
+    for (var i = 0; i < rows.length; i++) rows[i].splice(at, 1);
+    regrid(rows, grid.r, at);
   }
 
   function applyPaletteItem(it) {
+    if (it.grid && mf && !texMode) {
+      if (grid) {
+        setStatus('一個式子只能放一個矩陣／大括號。要換掉的話，先按格子上方的「刪除整個」。', 'err');
+        return;
+      }
+      if (it.grid.prefix && !mf.latex()) mf.latex(it.grid.prefix);
+      makeGrid(it.grid.env, emptyRows(it.grid.rows, it.grid.cols));
+      onMathEdit();
+      focusCell(0, 0);
+      return;
+    }
     if (it.tex !== undefined) {
       var ta = $('latex');
       // 有內容就加在後面，沒有就直接放
@@ -155,12 +373,13 @@
       t.value += it.w || it.cmd || '';
       return;
     }
+    var target = (grid && active) || mf;
     var steps = it.seq || [[it.cmd ? 'cmd' : 'w', it.cmd || it.w]];
     for (var i = 0; i < steps.length; i++) {
-      if (steps[i][0] === 'cmd') mf.cmd(steps[i][1]);
-      else mf.write(steps[i][1]);
+      if (steps[i][0] === 'cmd') target.cmd(steps[i][1]);
+      else target.write(steps[i][1]);
     }
-    mf.focus();
+    target.focus();
   }
 
   function buildPalette(tab) {
@@ -375,18 +594,20 @@
   function initEditor() {
     if (window.MathQuill) {
       mq = MathQuill.getInterface(2);
-      mf = mq.MathField($('mathField'), {
-        spaceBehavesLikeTab: false,
-        leftRightIntoCmdGoes: 'up',
-        restrictMismatchedBrackets: true,
-        sumStartsWithNEquals: true,
-        supSubsRequireOperand: true,
-        charsThatBreakOutOfSupSub: '+-=<>',
-        autoSubscriptNumerals: false,
-        autoCommands: 'pi theta sqrt sum prod int alpha beta gamma delta lambda mu sigma omega phi infty pm times div le ge ne approx angle',
-        autoOperatorNames: 'sin cos tan cot sec csc log ln lim exp max min',
-        handlers: { edit: onMathEdit, enter: doInsert }
-      });
+      mf = mq.MathField($('mathField'), fieldConfig({
+        edit: onMathEdit,
+        enter: doInsert,
+        moveOutOf: function (dir) { if (dir === mq.R && grid) focusCell(0, 0); },
+        downOutOf: function () { if (grid) focusCell(0, 0); }
+      }));
+      active = mf;
+      $('mathField').addEventListener('focusin', function () { active = mf; });
+
+      $('gridAddRow').onclick = function () { addRow(grid.r + 1); };
+      $('gridDelRow').onclick = function () { delRow(grid.r); };
+      $('gridAddCol').onclick = function () { addCol(grid.c + 1); };
+      $('gridDelCol').onclick = function () { delCol(grid.c); };
+      $('gridRemove').onclick = function () { removeGrid(); onMathEdit(); mf.focus(); };
     } else {
       // CDN 載不到時，至少還能用 LaTeX 輸入
       $('mathField').textContent = '（視覺編輯器載入失敗，請用下方 LaTeX 輸入）';

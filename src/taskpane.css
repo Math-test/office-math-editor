@@ -17,6 +17,20 @@ kbd { border: 1px solid #c9ced6; border-bottom-width: 2px; border-radius: 3px; p
 #mathField { display: block; width: 100%; min-height: 64px; padding: 10px; font-size: 22px;
              border: 1px solid #8aa4c0; border-radius: 6px; background: #ffffff; }
 #mathField.mq-focused { border-color: #1f5f8b; box-shadow: 0 0 0 2px #cfe0ee; }
+/* 格子（矩陣、聯立方程式） */
+#gridBox { margin-top: 6px; padding: 6px 8px 2px; border: 1px solid #c9d6e3; border-radius: 6px; background: #f5f8fb; }
+.gridHead { font-size: 12px; }
+.gridHead span { margin-right: 6px; color: #1f5f8b; font-weight: bold; }
+.gridHead button { margin: 0 2px 4px 0; padding: 2px 7px; font-size: 12px; }
+.gridHead button.danger { color: #a33a2a; }
+#gridTable { border-collapse: separate; border-spacing: 4px; margin: 2px 0; }
+#gridTable td { padding: 0; vertical-align: middle; }
+#gridTable td.br { font-family: "Cambria Math", "Times New Roman", serif; line-height: 1; color: #555555;
+                   transform: scaleX(0.45); -ms-transform: scaleX(0.45); padding: 0; }
+#gridTable .cell { display: inline-block; min-width: 56px; min-height: 30px; padding: 3px 6px; font-size: 18px;
+                   background: #ffffff; border: 1px solid #b7c4d1; border-radius: 4px; }
+#gridTable .cell.mq-focused { border-color: #1f5f8b; box-shadow: 0 0 0 2px #cfe0ee; }
+#gridBox .hint { margin: 2px 0 4px; }
 #texNotice { margin-top: 6px; padding: 6px 8px; font-size: 12px; color: #7a4b00; background: #fff6e0;
              border: 1px solid #f0d9a4; border-radius: 4px; }
 
