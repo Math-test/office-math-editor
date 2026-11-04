@@ -60,6 +60,7 @@
       opt.parseXml = function (s) { return new DOMParser().parseFromString(s, 'text/xml'); };
     }
     var ts = doc.getElementsByTagNameNS(W, 't');
+    joinSplitMarker(ts, marker);
     for (var i = 0; i < ts.length; i++) {
       var t = ts[i], text = t.textContent, at = text.indexOf(marker);
       if (at < 0) continue;
@@ -98,6 +99,22 @@
       return true;
     }
     return false;
+  }
+
+  // Word 有時把佔位文字拆在好幾個 run（拼字檢查、修訂、字型提示）：整段移回第一個 w:t
+  function joinSplitMarker(ts, marker) {
+    var all = '', starts = [], i;
+    for (i = 0; i < ts.length; i++) { starts.push(all.length); all += ts[i].textContent; }
+    var at = all.indexOf(marker);
+    if (at < 0) return false;
+    var end = at + marker.length;
+    for (i = 0; i < ts.length; i++) {
+      var txt = ts[i].textContent, s = starts[i], e = s + txt.length;
+      if (e <= at || s >= end) continue;
+      if (s <= at) setText(ts[i], txt.slice(0, at - s) + marker + (e > end ? txt.slice(end - s) : ''));
+      else setText(ts[i], txt.slice(Math.min(end, e) - s));
+    }
+    return true;
   }
 
   function firstRPr(run) {

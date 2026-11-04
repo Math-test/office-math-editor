@@ -103,6 +103,12 @@ ok(/w:val="39"/.test(new (require('@xmldom/xmldom').XMLSerializer)().serializeTo
 var edge = parseXml('<w:document ' + W_NS + '><w:body><w:p><w:r><w:t>' + I.MARKER + '</w:t></w:r></w:p></w:body></w:document>');
 I.replaceMarker(edge, I.MARKER, 'x', { parseXml: parseXml });
 ok(edge.getElementsByTagName('w:r').length === 0 && edge.getElementsByTagName('m:oMath').length === 1, '整段只有佔位文字時只留方程式');
+// Word 把佔位文字拆成好幾個 run（拼字檢查標記夾在中間）
+var split = parseXml('<w:document ' + W_NS + '><w:body><w:p><w:r><w:t>已知 EQMA</w:t></w:r><w:proofErr w:type="spellStart"/>' +
+  '<w:r><w:rPr><w:i/></w:rPr><w:t>RK77</w:t></w:r><w:r><w:t>31，求值</w:t></w:r></w:p></w:body></w:document>');
+ok(I.replaceMarker(split, I.MARKER, 'x', { parseXml: parseXml }), '佔位文字被拆成好幾個 run 也找得到');
+var splitText = [].map.call(split.getElementsByTagName('w:t'), function (t) { return t.textContent; }).join('');
+ok(splitText === '已知 ，求值' && split.getElementsByTagName('m:oMath').length === 1, '拆開的佔位文字整個被換掉', splitText);
 
 console.log('\n通過 ' + passes + '，失敗 ' + fails);
 process.exit(fails ? 1 : 0);

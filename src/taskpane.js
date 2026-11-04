@@ -574,8 +574,9 @@
   }
 
   // ---------- Word ----------
+  // 回傳 true 表示走了備用插入方式
   function wordInsert(latex) {
-    var opt = options();
+    var opt = options(), fallback = false;
     return Word.run(function (ctx) {
       var sel = ctx.document.getSelection();
       sel.load('font/size');
@@ -599,8 +600,10 @@
               fontSize: size, noShrink: opt.noShrink, italicNum: opt.italicNum, parseXml: parseXml, cursorMarker: CURSOR
             });
             if (!ok) {
-              marker.delete();
-              return ctx.sync().then(function () { throw new Error('找不到插入位置，請再試一次'); });
+              // 段落裡讀不到佔位文字：退而求其次直接蓋掉佔位文字（Word 可能會多一個換行）
+              marker.insertOoxml(Latex2Omml.toFlatOpc(latex, { italicNum: opt.italicNum }), 'Replace');
+              fallback = true;
+              return ctx.sync();
             }
             para.insertOoxml(serialize(doc), 'Replace');
             return ctx.sync();
@@ -618,7 +621,7 @@
           });
         });
       });
-    });
+    }).then(function () { return fallback; });
   }
 
   function wordLoad() {
@@ -677,9 +680,9 @@
     }
     $('btnInsert').disabled = true;
     setStatus('插入中…');
-    wordInsert(latex).then(function () {
+    wordInsert(latex).then(function (fallback) {
       pushHistory(latex);
-      setStatus('已插入', 'ok');
+      setStatus(fallback ? '已插入（用備用方式，後面若多了換行請按 Delete 接回）' : '已插入', 'ok');
     })['catch'](function (e) {
       setStatus('插入失敗：' + errText(e), 'err');
     }).then(function () { $('btnInsert').disabled = false; });
