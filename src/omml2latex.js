@@ -101,6 +101,7 @@
     var sty = rpr && childM(rpr, 'sty');
     if (nor) {
       if (isCJK(text) && !/[a-zA-Z]/.test(text)) return text;
+      if (/^[0-9.]+$/.test(text)) return text; // 「數字也斜體」產生的數字
       if (/^[    ]+$/.test(text)) {
         return join(text.split('').map(function (c) { return c === ' ' ? '\\ ' : mapChar(c); }));
       }

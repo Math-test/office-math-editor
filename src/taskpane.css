@@ -17,6 +17,15 @@ kbd { border: 1px solid #c9ced6; border-bottom-width: 2px; border-radius: 3px; p
 #mathField { display: block; width: 100%; min-height: 64px; padding: 10px; font-size: 22px;
              border: 1px solid #8aa4c0; border-radius: 6px; background: #ffffff; }
 #mathField.mq-focused { border-color: #1f5f8b; box-shadow: 0 0 0 2px #cfe0ee; }
+/* 「數字也斜體」：MathQuill 的數字沒有 class，只能讓整個非變數的文字斜體，再把運算子轉回正體 */
+.italic-num .mq-root-block { font-style: italic; }
+.italic-num .mq-binary-operator, .italic-num .mq-operator-name, .italic-num .mq-text-mode,
+.italic-num .mq-paren, .italic-num .mq-bracket-paren { font-style: normal; }
+
+/* 下方加字、lim：\textcolor{und}{本體\textcolor{unb}{下面}}，下面那段用表格標題放到底下 */
+.mq-p-und { display: inline-table; vertical-align: baseline; text-align: center; }
+.mq-p-unb { display: table-caption; caption-side: bottom; font-size: 60%; line-height: 1.1; text-align: center; }
+
 /* 弧、方框、上方加字（taskpane.js 的 decorate() 加上 mq-p-* class） */
 .mq-p-arc { display: inline-block; padding: 0.3em 0.05em 0; border-top: 1.5px solid #1f2328;
             border-radius: 50% 50% 0 0 / 0.45em 0.45em 0 0; }

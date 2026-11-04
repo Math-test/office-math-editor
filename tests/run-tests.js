@@ -67,7 +67,7 @@ if (fs.existsSync(zipPath)) {
 
 // 4) 分數不縮小
 var big = L.toOmml('\\frac{1}{2}', { fontSize: 12 });
-ok(/<w:sz w:val="36"\/>/.test(big), '12pt 行內分數 → 分子分母 18pt（×1.49）', big);
+ok(/<w:sz w:val="34"\/>/.test(big), '12pt 行內分數 → 分子分母 17pt（×1.4）', big);
 var small = L.toOmml('\\frac{1}{2}', { fontSize: 12, noShrink: false });
 ok(!/<w:sz /.test(small), '關閉時不改字級');
 var disp = L.toOmml('\\frac{1}{2}', { display: true });
@@ -75,7 +75,7 @@ ok(!/<w:sz /.test(disp), '獨立方程式不需放大');
 var sup = L.toOmml('e^{\\frac{1}{2}}', { fontSize: 12 });
 ok(!/<w:sz /.test(sup), '上標裡的分數不放大');
 var nested = L.toOmml('\\frac{\\frac{1}{2}}{3}', { fontSize: 10.5 });
-ok((nested.match(/w:val="31"/g) || []).length >= 3, '10.5pt 繁分數：外層放大一次（31 半點），內層沿用', nested);
+ok((nested.match(/w:val="29"/g) || []).length >= 3, '10.5pt 繁分數：外層放大一次（29 半點），內層沿用', nested);
 
 // 5) 解析細節
 function latexOf(s) { return O.fromOoxml(wrap(L.toOmml(s, { noShrink: false })), parseXml)[0].latex; }
@@ -99,7 +99,7 @@ ok(runs[0].textContent === '已知', '前文', runs[0].textContent);
 ok(runs[runs.length - 1].textContent === '，求值', '後文', runs[runs.length - 1].textContent);
 ok(runs[runs.length - 1].getElementsByTagName('w:tab').length === 0, 'tab 不會被複製到後文');
 ok(runs[runs.length - 1].getElementsByTagName('w:b').length === 1, '後文保留粗體');
-ok(/w:val="42"/.test(new (require('@xmldom/xmldom').XMLSerializer)().serializeToString(p0)), '14pt 段落 → 分數 21pt（42 半點）');
+ok(/w:val="39"/.test(new (require('@xmldom/xmldom').XMLSerializer)().serializeToString(p0)), '14pt 段落 → 分數 19.5pt（39 半點）');
 var edge = parseXml('<w:document ' + W_NS + '><w:body><w:p><w:r><w:t>' + I.MARKER + '</w:t></w:r></w:p></w:body></w:document>');
 I.replaceMarker(edge, I.MARKER, 'x', { parseXml: parseXml });
 ok(edge.getElementsByTagName('w:r').length === 0 && edge.getElementsByTagName('m:oMath').length === 1, '整段只有佔位文字時只留方程式');

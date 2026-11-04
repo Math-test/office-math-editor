@@ -11,7 +11,7 @@
 
   var M = 'http://schemas.openxmlformats.org/officeDocument/2006/math';
   var W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
-  var SCALE = 1.49;
+  var SCALE = 1.4; // 跟 latex2omml.js 的 INLINE_FRACTION_SCALE 一樣
   // 這些容器裡的分數本來就該小（上下標、根指數、極限下方、已在分數裡）
   var SKIP_PARENTS = { num: 1, den: 1, sub: 1, sup: 1, deg: 1, lim: 1 };
 

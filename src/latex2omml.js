@@ -14,7 +14,8 @@
 }(this, function () {
   'use strict';
 
-  var INLINE_FRACTION_SCALE = 1.49; // 實測：Word 行內分數字高 = 顯示模式的 0.67 倍
+  // 實測：12pt 文字，分子分母設 17pt 時數字跟旁邊一樣高（Word 縮小的比例不是固定 0.67，1.49 會偏大）
+  var INLINE_FRACTION_SCALE = 1.4;
 
   // ---------- 符號表 ----------
   var SYMBOLS = {
@@ -32,7 +33,7 @@
     le: '≤', leq: '≤', ge: '≥', geq: '≥', ne: '≠', neq: '≠', approx: '≈', sim: '∼', simeq: '≃',
     cong: '≅', equiv: '≡', propto: '∝', ll: '≪', gg: '≫', leqslant: '⩽', geqslant: '⩾',
     'in': '∈', notin: '∉', ni: '∋', subset: '⊂', supset: '⊃', subseteq: '⊆', supseteq: '⊇',
-    subsetneq: '⊊', perp: '⊥', parallel: '∥', mid: '∣', nmid: '∤',
+    subsetneq: '⊊', perp: '⊥', parallel: '∥', sslash: '⫽', mid: '∣', nmid: '∤',
     // 箭頭
     to: '→', rightarrow: '→', leftarrow: '←', gets: '←', leftrightarrow: '↔', Rightarrow: '⇒',
     Leftarrow: '⇐', Leftrightarrow: '⇔', implies: '⇒', iff: '⇔', mapsto: '↦', uparrow: '↑',
@@ -415,12 +416,12 @@
   function run(text, ctx, opt) {
     opt = opt || {};
     var mrpr = '';
-    if (opt.nor) mrpr = '<m:rPr><m:nor/></m:rPr>';
+    if (opt.nor || opt.italic) mrpr = '<m:rPr><m:nor/></m:rPr>';
     else if (opt.sty || ctx.sty) mrpr = '<m:rPr><m:sty m:val="' + (opt.sty || ctx.sty) + '"/></m:rPr>';
     var wrpr = '';
     var fonts = opt.nor ? '<w:rFonts w:hint="eastAsia"/>' : '<w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>';
+    if (opt.italic) fonts += '<w:i/>';
     if (ctx.sz) wrpr = '<w:rPr>' + fonts + '<w:sz w:val="' + ctx.sz + '"/><w:szCs w:val="' + ctx.sz + '"/></w:rPr>';
-    else if (opt.nor) wrpr = '<w:rPr>' + fonts + '</w:rPr>';
     else wrpr = '<w:rPr>' + fonts + '</w:rPr>';
     return '<m:r>' + mrpr + wrpr + '<m:t xml:space="preserve">' + esc(text) + '</m:t></m:r>';
   }
@@ -451,6 +452,9 @@
         return out;
       case 'ord':
         if (n.v === '-') return run('−', ctx);
+        // Word 的數字一律正體（Cambria Math 沒有斜體數字，sty=i 無效）；
+        // 「數字也斜體」改用一般文字 + 斜體，實測可以
+        if (n.kind === 'num' && ctx.italicNum && !ctx.sty) return run(n.v, ctx, { italic: true });
         return run(n.v, ctx);
       case 'text':
         return run(n.v, ctx, { nor: true });
@@ -561,13 +565,14 @@
    *   noShrink {boolean} 行內分數不縮小（預設 true）
    *   fontSize {number}  插入位置的字級（pt），用來計算放大後的分數字級，預設 12
    *   display  {boolean} 產生獨立一行的方程式（m:oMathPara）
+   *   italicNum {boolean} 數字也用斜體（Word 預設只有字母斜體）
    * @returns {string} <m:oMath>…</m:oMath>（display 時外面包 m:oMathPara）
    */
   function toOmml(latex, options) {
     options = options || {};
     var display = !!options.display;
     var noShrink = options.noShrink !== false && !display;
-    var ctx = { noShrink: noShrink, baseSz: Math.round((options.fontSize || 12) * 2) };
+    var ctx = { noShrink: noShrink, baseSz: Math.round((options.fontSize || 12) * 2), italicNum: !!options.italicNum };
     var body = emit(parse(latex), ctx);
     var math = '<m:oMath>' + body + '</m:oMath>';
     if (display) math = '<m:oMathPara><m:oMathParaPr><m:jc m:val="center"/></m:oMathParaPr>' + math + '</m:oMathPara>';

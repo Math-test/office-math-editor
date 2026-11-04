@@ -9,6 +9,9 @@
   var HISTORY_KEY = 'ome.history';
   var OPTIONS_KEY = 'ome.options';
 
+  // lim 的下面可以打字：下方加字的記號，本體是 \lim（見下方「弧、方框、上方加字」）
+  var LIM_PROXY = '\\textcolor{#1f232d}{\\lim\\textcolor{#1f232e}{}}';
+
   // MathQuill 0.10 視覺編輯不支援這些（實測），遇到就改用 LaTeX 文字編輯
   var TEX_ONLY = /\\begin|\\overparen|\\underparen|\\boxed|\\hat|\\widehat|\\tilde|\\widetilde|\\dot|\\ddot|\\overset|\\underset|\\stackrel|\\iint|\\iiint|\\mathbb|\\overbrace|\\underbrace|\\genfrac|\\dfrac|\\tfrac|\\cfrac|\\operatorname\{(?!gcd|exp)/;
 
@@ -26,6 +29,7 @@
       { l: '|x|', t: '絕對值', cmd: '|' },
       { l: 'AB⃗', t: '向量', cmd: '\\overrightarrow' },
       { l: 'A̅B̅', t: '線段（上橫線）', cmd: '\\overline' },
+      { l: '⫽', t: '平行（斜線，課本寫法）', w: '⫽' },
       { l: '∠', t: '角', w: '\\angle ' },
       { l: '△', t: '三角形', w: '\\triangle ' },
       { l: '°', t: '度', w: '^{\\circ}' },
@@ -37,7 +41,7 @@
       { l: '≠', t: '不等於', w: '\\ne ' },
       { l: 'Σ', t: '連加', cmd: '\\sum' },
       { l: '∫', t: '積分', cmd: '\\int' },
-      { l: 'lim', t: '極限', seq: [['w', '\\lim'], ['cmd', '_']], wide: true },
+      { l: 'lim', t: '極限（下面可以打字，打完按 → 離開）', seq: [['w', LIM_PROXY], ['keys', 2]], wide: true },
       { l: 'logₐ', t: '對數', seq: [['w', '\\log'], ['cmd', '_']], wide: true },
       { l: 'Cⁿₖ', t: '組合數', seq: [['w', 'C'], ['cmd', '_']] },
       { l: '文字', t: '在方程式裡打中文或一般文字', cmd: '\\text', wide: true }
@@ -45,7 +49,7 @@
     [ // 符號
       '\\pm:±', '\\mp:∓', '\\times:×', '\\div:÷', '\\cdot:·', '\\le:≤', '\\ge:≥', '\\ne:≠', '\\approx:≈', '\\equiv:≡',
       '\\sim:∼', '\\cong:≅', '\\propto:∝', '\\infty:∞', '\\angle:∠', '\\triangle:△', '^{\\circ}:°', "':′",
-      '\\perp:⊥', '\\parallel:∥', '\\therefore:∴', '\\because:∵', '\\in:∈', '\\notin:∉', '\\subset:⊂',
+      '\\perp:⊥', '⫽:⫽', '\\parallel:∥', '\\therefore:∴', '\\because:∵', '\\in:∈', '\\notin:∉', '\\subset:⊂',
       '\\subseteq:⊆', '\\cup:∪', '\\cap:∩', '\\varnothing:∅', '\\Rightarrow:⇒', '\\Leftrightarrow:⇔', '\\to:→',
       '\\cdots:⋯', '\\%:%', 'ℝ:ℝ', 'ℕ:ℕ', 'ℤ:ℤ', 'ℚ:ℚ'
     ],
@@ -58,7 +62,7 @@
       { l: 'cot', w: '\\cot ', wide: true }, { l: 'sec', w: '\\sec ', wide: true }, { l: 'csc', w: '\\csc ', wide: true },
       { l: 'sin²', w: '\\sin^2', wide: true }, { l: 'log', w: '\\log ', wide: true }, { l: 'ln', w: '\\ln ', wide: true },
       { l: 'logₐ', seq: [['w', '\\log'], ['cmd', '_']], wide: true },
-      { l: 'lim', seq: [['w', '\\lim'], ['cmd', '_']], wide: true }, { l: 'exp', w: '\\exp ', wide: true },
+      { l: 'lim', seq: [['w', LIM_PROXY], ['keys', 2]], wide: true }, { l: 'exp', w: '\\exp ', wide: true },
       { l: 'f(x)', w: 'f\\left(x\\right)', wide: true }, { l: "f′(x)", w: "f'\\left(x\\right)", wide: true }
     ],
     [ // 進階：grid 用格子編輯；tex 是 MathQuill 不支援、只能用 LaTeX 的
@@ -76,6 +80,9 @@
       { l: '上方加字', t: '先打上面的小字，按 → 再打下面（例如等號上面寫「定義」）',
         seq: [['w', '\\textcolor{#1f232b}{\\textcolor{#1f232c}{}}'], ['keys', 2]],
         tex: '\\overset{\\text{定義}}{=}', wide: true },
+      { l: '下方加字', t: '先打下面的小字，按 ← 回到上面打本體',
+        seq: [['w', '\\textcolor{#1f232d}{\\textcolor{#1f232e}{}}'], ['keys', 2]],
+        tex: '\\underset{\\text{說明}}{=}', wide: true },
       { l: '組合 (n k)', cmd: '\\binom', wide: true },
       { l: '集合 {…}', w: '\\left\\{\\right\\}', wide: true }
     ]
@@ -177,9 +184,10 @@
   // MathQuill 不支援 \overparen 等。借用 \textcolor{#1f232?}{…} 當記號（跟字的顏色幾乎一樣），
   // decorate() 依實際顏色加 class 讓 CSS 畫出外觀；進出編輯器時再和真正的 LaTeX 互換
   // 上方加字是 \textcolor{ovs}{\textcolor{ovt}{上}下}：打完上面按 → 就到下面
-  var PTAG = { arc: '#1f2329', box: '#1f232a', ovs: '#1f232b', ovt: '#1f232c' };
-  var PNAME = { '9': 'arc', a: 'box', b: 'ovs', c: 'ovt' };      // 顏色最後一碼 → 名稱
-  var PBLUE = { 41: 'arc', 42: 'box', 43: 'ovs', 44: 'ovt' };    // rgb 藍色值 → 名稱
+  // 下方加字是 \textcolor{und}{本體\textcolor{unb}{下面}}；本體是 \lim 時轉成 \lim_{…}
+  var PTAG = { arc: '#1f2329', box: '#1f232a', ovs: '#1f232b', ovt: '#1f232c', und: '#1f232d', unb: '#1f232e' };
+  var PNAME = { '9': 'arc', a: 'box', b: 'ovs', c: 'ovt', d: 'und', e: 'unb' };       // 顏色最後一碼 → 名稱
+  var PBLUE = { 41: 'arc', 42: 'box', 43: 'ovs', 44: 'ovt', 45: 'und', 46: 'unb' };   // rgb 藍色值 → 名稱
   var PROXY = { arc: '\\overparen', box: '\\boxed' };
 
   function decorate() {
@@ -223,15 +231,21 @@
   }
 
   function proxyToTex(s) {
-    var re = /\\textcolor\{#1f232([9a-c])\}/gi, out = '', last = 0, m;
+    var re = /\\textcolor\{#1f232([9a-e])\}/gi, out = '', last = 0, m;
     while ((m = re.exec(s))) {
-      var g = readGroup(s, m.index + m[0].length), name = PNAME[m[1].toLowerCase()];
+      var g = readGroup(s, m.index + m[0].length), name = PNAME[m[1].toLowerCase()], inner, base;
       if (!g) break;
       out += s.slice(last, m.index);
       if (name === 'ovs') {
         // {\textcolor{ovt}{上}下}：ovt 以外的內容都是下面那一行
-        var top = proxyBody(g.body, 'ovt'), tag = '\\textcolor{' + PTAG.ovt + '}{' + top + '}';
-        out += '\\overset{' + proxyToTex(top) + '}{' + proxyToTex(g.body.replace(tag, '')) + '}';
+        inner = proxyBody(g.body, 'ovt');
+        base = g.body.replace('\\textcolor{' + PTAG.ovt + '}{' + inner + '}', '');
+        out += '\\overset{' + proxyToTex(inner) + '}{' + proxyToTex(base) + '}';
+      } else if (name === 'und') {
+        inner = proxyBody(g.body, 'unb');
+        base = g.body.replace('\\textcolor{' + PTAG.unb + '}{' + inner + '}', '');
+        if (/^\s*\\lim\s*$/.test(base)) out += '\\lim_{' + proxyToTex(inner) + '}';
+        else out += '\\underset{' + proxyToTex(inner) + '}{' + proxyToTex(base) + '}';
       } else out += (PROXY[name] || '') + '{' + proxyToTex(g.body) + '}';
       last = re.lastIndex = g.end;
     }
@@ -239,14 +253,29 @@
   }
 
   function texToProxy(s) {
-    var re = /\\(overparen|boxed|overset)(?![a-zA-Z])/g, out = '', last = 0, m;
+    var re = /\\(overparen|boxed|overset|underset|lim)(?![a-zA-Z])/g, out = '', last = 0, m;
     while ((m = re.exec(s))) {
-      var a = readArg(s, m.index + m[0].length), rep;
+      var at = m.index + m[0].length, a, b, rep;
+      if (m[1] === 'lim') {
+        // 只有寫了下標的 lim 才換
+        var k = at;
+        while (s.charAt(k) === ' ') k++;
+        if (s.charAt(k) !== '_') continue;
+        a = readArg(s, k + 1);
+        if (!a) break;
+        rep = '\\textcolor{' + PTAG.und + '}{\\lim\\textcolor{' + PTAG.unb + '}{' + texToProxy(a.body) + '}}';
+        out += s.slice(last, m.index) + rep;
+        last = re.lastIndex = a.end;
+        continue;
+      }
+      a = readArg(s, at);
       if (!a) break;
-      if (m[1] === 'overset') {
-        var b = readArg(s, a.end);
+      if (m[1] === 'overset' || m[1] === 'underset') {
+        b = readArg(s, a.end);
         if (!b) break;
-        rep = '\\textcolor{' + PTAG.ovs + '}{\\textcolor{' + PTAG.ovt + '}{' + texToProxy(a.body) + '}' + texToProxy(b.body) + '}';
+        rep = m[1] === 'overset'
+          ? '\\textcolor{' + PTAG.ovs + '}{\\textcolor{' + PTAG.ovt + '}{' + texToProxy(a.body) + '}' + texToProxy(b.body) + '}'
+          : '\\textcolor{' + PTAG.und + '}{' + texToProxy(b.body) + '\\textcolor{' + PTAG.unb + '}{' + texToProxy(a.body) + '}}';
         a = b;
       } else rep = '\\textcolor{' + (m[1] === 'boxed' ? PTAG.box : PTAG.arc) + '}{' + texToProxy(a.body) + '}';
       out += s.slice(last, m.index) + rep;
@@ -527,7 +556,7 @@
   }
 
   function options() {
-    return { noShrink: $('optNoShrink').checked, display: $('optDisplay').checked };
+    return { noShrink: $('optNoShrink').checked, display: $('optDisplay').checked, italicNum: $('optItalicNum').checked };
   }
 
   // ---------- 複製 ----------
@@ -554,7 +583,7 @@
         var size = sel.font.size || 12;
         if (opt.display) {
           // 獨立一行：直接插入段落（Word 會自己斷行）
-          sel.insertOoxml(Latex2Omml.toFlatOpc(latex, { display: true }), 'Replace');
+          sel.insertOoxml(Latex2Omml.toFlatOpc(latex, { display: true, italicNum: opt.italicNum }), 'Replace');
           return ctx.sync();
         }
         // 行內：佔位文字 → 整段 OOXML 換掉，避免 insertOoxml 把句子切成兩段
@@ -567,7 +596,7 @@
           return ctx.sync().then(function () {
             var doc = parseXml(ox.value);
             var ok = InsertInline.replaceMarker(doc, InsertInline.MARKER, latex, {
-              fontSize: size, noShrink: opt.noShrink, parseXml: parseXml, cursorMarker: CURSOR
+              fontSize: size, noShrink: opt.noShrink, italicNum: opt.italicNum, parseXml: parseXml, cursorMarker: CURSOR
             });
             if (!ok) {
               marker.delete();
@@ -713,8 +742,21 @@
     buildPalette(0);
 
     var opts = load(OPTIONS_KEY, null);
-    if (opts) { $('optNoShrink').checked = opts.noShrink !== false; $('optDisplay').checked = !!opts.display; }
-    $('optNoShrink').onchange = $('optDisplay').onchange = function () { store(OPTIONS_KEY, options()); };
+    if (opts) {
+      $('optNoShrink').checked = opts.noShrink !== false;
+      $('optDisplay').checked = !!opts.display;
+      $('optItalicNum').checked = !!opts.italicNum;
+    }
+    // 編輯框也跟著顯示斜體數字（MathQuill 自己有 class，不能整個覆蓋）
+    var showItalic = function () {
+      if ($('optItalicNum').checked) $('editorBox').classList.add('italic-num');
+      else $('editorBox').classList.remove('italic-num');
+    };
+    $('optNoShrink').onchange = $('optDisplay').onchange = $('optItalicNum').onchange = function () {
+      store(OPTIONS_KEY, options());
+      showItalic();
+    };
+    showItalic();
 
     var ta = $('latex');
     ta.oninput = onLatexInput;

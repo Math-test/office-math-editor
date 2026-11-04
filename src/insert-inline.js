@@ -51,7 +51,7 @@
    * @param {Document} doc 段落的 OOXML（Flat OPC）
    * @param {string} marker 佔位文字
    * @param {string} latex
-   * @param {object} opt { fontSize, noShrink, parseXml(string)→Document, cursorMarker（選用）}
+   * @param {object} opt { fontSize, noShrink, italicNum, parseXml(string)→Document, cursorMarker（選用）}
    * @returns {boolean} 是否有找到並替換
    */
   function replaceMarker(doc, marker, latex, opt) {
@@ -66,7 +66,7 @@
       var run = t.parentNode;
       if (!isW(run, 'r')) continue;
       var size = runSizePt(run) || opt.fontSize || 12;
-      var math = omathElement(doc, latex, { fontSize: size, noShrink: opt.noShrink, parseXml: opt.parseXml });
+      var math = omathElement(doc, latex, { fontSize: size, noShrink: opt.noShrink, italicNum: opt.italicNum, parseXml: opt.parseXml });
       var before = text.slice(0, at), after = text.slice(at + marker.length);
       var parent = run.parentNode;
       var idx = childIndex(run, t);
