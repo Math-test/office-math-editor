@@ -26,6 +26,8 @@
 
 ## 安裝（給老師）
 
+![安裝小漫畫](docs/install-comic.svg)
+
 增益集的程式放在網路上（GitHub Pages），電腦只需要匯入 `manifest.xml` 這個設定檔。**使用時需要連網。**
 
 > 下面的 `manifest.xml` 是指**已經改成你們網址的版本**（見下方「架設自己的版本」）。
