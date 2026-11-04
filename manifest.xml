@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  數學方程式編輯器：Office 增益集設定檔（Word / Excel，Office 2016 以上、網頁版）
+  網址要換成你的 GitHub Pages：node tools/set-base-url.js https://你的帳號.github.io/office-math-editor
+-->
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+           xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+           xsi:type="TaskPaneApp">
+  <Id>89327064-5b92-40eb-beed-f9ed4402a12e</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>office-math-editor</ProviderName>
+  <DefaultLocale>zh-TW</DefaultLocale>
+  <DisplayName DefaultValue="數學方程式編輯器"/>
+  <Description DefaultValue="插入可編輯的 Word 方程式，行內分數不縮小；也能讀回既有方程式修改、整份文件的分數一鍵放大。"/>
+  <IconUrl DefaultValue="https://YOUR-GITHUB-NAME.github.io/office-math-editor/assets/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://YOUR-GITHUB-NAME.github.io/office-math-editor/assets/icon-64.png"/>
+  <SupportUrl DefaultValue="https://YOUR-GITHUB-NAME.github.io/office-math-editor/"/>
+  <AppDomains>
+    <AppDomain>https://YOUR-GITHUB-NAME.github.io</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="Document"/>
+    <Host Name="Workbook"/>
+  </Hosts>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://YOUR-GITHUB-NAME.github.io/office-math-editor/src/taskpane.html"/>
+  </DefaultSettings>
+  <Permissions>ReadWriteDocument</Permissions>
+
+  <!-- 功能區按鈕（Office 2016 新版以上）；不支援的舊版會改從「插入 → 我的增益集」開啟 -->
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Hosts>
+      <Host xsi:type="Document">
+        <DesktopFormFactor>
+          <GetStarted>
+            <Title resid="GetStarted.Title"/>
+            <Description resid="GetStarted.Description"/>
+            <LearnMoreUrl resid="Home.Url"/>
+          </GetStarted>
+          <FunctionFile resid="Commands.Url"/>
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="MathEq.Group.Word">
+                <Label resid="Group.Label"/>
+                <Icon>
+                  <bt:Image size="16" resid="Icon.16"/>
+                  <bt:Image size="32" resid="Icon.32"/>
+                  <bt:Image size="80" resid="Icon.80"/>
+                </Icon>
+                <Control xsi:type="Button" id="MathEq.Open.Word">
+                  <Label resid="Button.Label"/>
+                  <Supertip>
+                    <Title resid="Button.Label"/>
+                    <Description resid="Button.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16"/>
+                    <bt:Image size="32" resid="Icon.32"/>
+                    <bt:Image size="80" resid="Icon.80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>MathEqTaskpane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.Url"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+      <Host xsi:type="Workbook">
+        <DesktopFormFactor>
+          <GetStarted>
+            <Title resid="GetStarted.Title"/>
+            <Description resid="GetStarted.Description"/>
+            <LearnMoreUrl resid="Home.Url"/>
+          </GetStarted>
+          <FunctionFile resid="Commands.Url"/>
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="MathEq.Group.Excel">
+                <Label resid="Group.Label"/>
+                <Icon>
+                  <bt:Image size="16" resid="Icon.16"/>
+                  <bt:Image size="32" resid="Icon.32"/>
+                  <bt:Image size="80" resid="Icon.80"/>
+                </Icon>
+                <Control xsi:type="Button" id="MathEq.Open.Excel">
+                  <Label resid="Button.Label"/>
+                  <Supertip>
+                    <Title resid="Button.Label"/>
+                    <Description resid="Button.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16"/>
+                    <bt:Image size="32" resid="Icon.32"/>
+                    <bt:Image size="80" resid="Icon.80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>MathEqTaskpane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.Url"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Icon.16" DefaultValue="https://YOUR-GITHUB-NAME.github.io/office-math-editor/assets/icon-16.png"/>
+        <bt:Image id="Icon.32" DefaultValue="https://YOUR-GITHUB-NAME.github.io/office-math-editor/assets/icon-32.png"/>
+        <bt:Image id="Icon.80" DefaultValue="https://YOUR-GITHUB-NAME.github.io/office-math-editor/assets/icon-80.png"/>
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="Commands.Url" DefaultValue="https://YOUR-GITHUB-NAME.github.io/office-math-editor/src/commands.html"/>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://YOUR-GITHUB-NAME.github.io/office-math-editor/src/taskpane.html"/>
+        <bt:Url id="Home.Url" DefaultValue="https://YOUR-GITHUB-NAME.github.io/office-math-editor/"/>
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="GetStarted.Title" DefaultValue="數學方程式編輯器已安裝"/>
+        <bt:String id="Group.Label" DefaultValue="方程式"/>
+        <bt:String id="Button.Label" DefaultValue="數學方程式"/>
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="GetStarted.Description" DefaultValue="在「常用」索引標籤按「數學方程式」開啟編輯器。"/>
+        <bt:String id="Button.Tooltip" DefaultValue="開啟數學方程式編輯器：插入不縮小的分數、讀回既有方程式修改。"/>
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>

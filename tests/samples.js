@@ -1,0 +1,25 @@
+// 測試用的高中數學式子（行內與獨立兩種都會測）
+module.exports = [
+  'x=\\frac{a+b}{c}',
+  '\\frac{1}{2}+\\frac{3}{4}=\\frac{5}{4}',
+  'x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}',
+  '\\sqrt[3]{8}=2,\\ \\sqrt{2}\\approx 1.414',
+  '\\left(\\frac{1}{100}\\right)^b+100^a',
+  '\\log_2 8=3,\\ \\log\\frac{1}{a},\\ \\ln e=1',
+  '\\sin^2\\theta+\\cos^2\\theta=1',
+  '\\lim_{x\\to 0}\\frac{\\sin x}{x}=1',
+  '\\sum_{k=1}^{n}k^2=\\frac{n(n+1)(2n+1)}{6}',
+  '\\int_0^1 x^2\\,dx=\\frac{1}{3}',
+  '\\overrightarrow{AB}\\cdot\\vec{v}=|\\overrightarrow{AB}||\\vec{v}|\\cos\\theta',
+  '\\overline{AB}=5,\\ \\angle ABC=90^\\circ,\\ \\triangle ABC',
+  'C^{10}_{3}=\\binom{10}{3}=120',
+  'f(x)=\\begin{cases}x^2 & x\\ge 0\\\\ -x & x<0\\end{cases}',
+  '\\begin{bmatrix}1&2\\\\3&4\\end{bmatrix}',
+  'A\\cup B,\\ A\\cap B=\\emptyset,\\ x\\in\\mathbb{R}',
+  '|x+2|+|x-1|\\le 5',
+  '\\frac{\\frac{1}{2}}{3}\\text{ 為繁分數}',
+  'a_n=a_1r^{n-1},\\ S_n=\\frac{a_1(1-r^n)}{1-r}',
+  '\\because x>0\\ \\therefore \\sqrt{x^2}=x',
+  '\\overparen{AB}\\ \\text{弧長}',
+  'e^{\\frac{1}{2}}'
+];

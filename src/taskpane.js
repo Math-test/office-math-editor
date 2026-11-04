@@ -1,0 +1,453 @@
+/*
+ * 工作窗格主程式。純 ES5：Office 2016/2019 的增益集跑在 IE11 核心裡。
+ */
+(function () {
+  'use strict';
+
+  var HOST = null; // 'Word' | 'Excel' | null（直接用瀏覽器開）
+  var CURSOR = 'EQCURSOR4419'; // 插入後把游標放到方程式後面用
+  var HISTORY_KEY = 'ome.history';
+  var OPTIONS_KEY = 'ome.options';
+
+  // MathQuill 0.10 視覺編輯不支援這些（實測），遇到就改用 LaTeX 文字編輯
+  var TEX_ONLY = /\\begin|\\overparen|\\underparen|\\boxed|\\hat|\\widehat|\\tilde|\\widetilde|\\dot|\\ddot|\\overset|\\underset|\\stackrel|\\iint|\\iiint|\\mathbb|\\overbrace|\\underbrace|\\genfrac|\\dfrac|\\tfrac|\\cfrac|\\operatorname\{(?!gcd|exp)/;
+
+  // ---------- 符號面板 ----------
+  // cmd：MathQuill 結構（游標會進到裡面）；w：直接寫入；seq：依序執行；tex：只能用 LaTeX 編輯
+  var PALETTE = [
+    [ // 常用
+      { l: 'a/b', t: '分數（也可以直接打 /）', cmd: '\\frac' },
+      { l: '√', t: '根號', cmd: '\\sqrt' },
+      { l: 'ⁿ√', t: 'n 次方根', cmd: '\\nthroot' },
+      { l: 'x²', t: '上標（也可以打 ^）', cmd: '^' },
+      { l: 'x₁', t: '下標（也可以打 _）', cmd: '_' },
+      { l: '( )', t: '括號', cmd: '(' },
+      { l: '[ ]', t: '中括號', cmd: '[' },
+      { l: '|x|', t: '絕對值', cmd: '|' },
+      { l: 'AB⃗', t: '向量', cmd: '\\overrightarrow' },
+      { l: 'A̅B̅', t: '線段（上橫線）', cmd: '\\overline' },
+      { l: '∠', t: '角', w: '\\angle ' },
+      { l: '△', t: '三角形', w: '\\triangle ' },
+      { l: '°', t: '度', w: '^{\\circ}' },
+      { l: '±', t: '正負', w: '\\pm ' },
+      { l: '×', t: '乘', w: '\\times ' },
+      { l: '÷', t: '除', w: '\\div ' },
+      { l: '≤', t: '小於等於', w: '\\le ' },
+      { l: '≥', t: '大於等於', w: '\\ge ' },
+      { l: '≠', t: '不等於', w: '\\ne ' },
+      { l: 'Σ', t: '連加', cmd: '\\sum' },
+      { l: '∫', t: '積分', cmd: '\\int' },
+      { l: 'lim', t: '極限', seq: [['w', '\\lim'], ['cmd', '_']], wide: true },
+      { l: 'logₐ', t: '對數', seq: [['w', '\\log'], ['cmd', '_']], wide: true },
+      { l: 'Cⁿₖ', t: '組合數', seq: [['w', 'C'], ['cmd', '_']] },
+      { l: '文字', t: '在方程式裡打中文或一般文字', cmd: '\\text', wide: true }
+    ],
+    [ // 符號
+      '\\pm:±', '\\mp:∓', '\\times:×', '\\div:÷', '\\cdot:·', '\\le:≤', '\\ge:≥', '\\ne:≠', '\\approx:≈', '\\equiv:≡',
+      '\\sim:∼', '\\cong:≅', '\\propto:∝', '\\infty:∞', '\\angle:∠', '\\triangle:△', '^{\\circ}:°', "':′",
+      '\\perp:⊥', '\\parallel:∥', '\\therefore:∴', '\\because:∵', '\\in:∈', '\\notin:∉', '\\subset:⊂',
+      '\\subseteq:⊆', '\\cup:∪', '\\cap:∩', '\\varnothing:∅', '\\Rightarrow:⇒', '\\Leftrightarrow:⇔', '\\to:→',
+      '\\cdots:⋯', '\\%:%', 'ℝ:ℝ', 'ℕ:ℕ', 'ℤ:ℤ', 'ℚ:ℚ'
+    ],
+    [ // 希臘
+      '\\alpha:α', '\\beta:β', '\\gamma:γ', '\\delta:δ', '\\epsilon:ε', '\\theta:θ', '\\lambda:λ', '\\mu:μ',
+      '\\pi:π', '\\rho:ρ', '\\sigma:σ', '\\tau:τ', '\\phi:φ', '\\omega:ω', '\\Delta:Δ', '\\Sigma:Σ', '\\Omega:Ω', '\\Phi:Φ'
+    ],
+    [ // 函數
+      { l: 'sin', w: '\\sin ', wide: true }, { l: 'cos', w: '\\cos ', wide: true }, { l: 'tan', w: '\\tan ', wide: true },
+      { l: 'cot', w: '\\cot ', wide: true }, { l: 'sec', w: '\\sec ', wide: true }, { l: 'csc', w: '\\csc ', wide: true },
+      { l: 'sin²', w: '\\sin^2', wide: true }, { l: 'log', w: '\\log ', wide: true }, { l: 'ln', w: '\\ln ', wide: true },
+      { l: 'logₐ', seq: [['w', '\\log'], ['cmd', '_']], wide: true },
+      { l: 'lim', seq: [['w', '\\lim'], ['cmd', '_']], wide: true }, { l: 'exp', w: '\\exp ', wide: true },
+      { l: 'f(x)', w: 'f\\left(x\\right)', wide: true }, { l: "f′(x)", w: "f'\\left(x\\right)", wide: true }
+    ],
+    [ // 進階：MathQuill 不支援 → LaTeX
+      { l: '分段函數', tex: 'f(x)=\\begin{cases}x^2 & x\\ge 0\\\\-x & x<0\\end{cases}', wide: true },
+      { l: '聯立方程式', tex: '\\begin{cases}x+y=3\\\\x-y=1\\end{cases}', wide: true },
+      { l: '矩陣', tex: '\\begin{bmatrix}a & b\\\\c & d\\end{bmatrix}', wide: true },
+      { l: '行列式', tex: '\\begin{vmatrix}a & b\\\\c & d\\end{vmatrix}', wide: true },
+      { l: '弧 AB', tex: '\\overparen{AB}', wide: true },
+      { l: '方框', tex: '\\boxed{x}', wide: true },
+      { l: '組合 (n k)', cmd: '\\binom', wide: true },
+      { l: '集合 {…}', w: '\\left\\{\\right\\}', wide: true },
+      { l: '上方加字', tex: '\\overset{\\text{定義}}{=}', wide: true }
+    ]
+  ];
+
+  var mq = null, mf = null, texMode = false, syncing = false;
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ---------- 工具 ----------
+  function setStatus(text, cls) {
+    var s = $('status');
+    s.textContent = text || '';
+    s.className = cls || '';
+  }
+  function parseXml(s) { return new DOMParser().parseFromString(s, 'text/xml'); }
+  function serialize(doc) { return new XMLSerializer().serializeToString(doc); }
+  function store(key, val) { try { window.localStorage.setItem(key, JSON.stringify(val)); } catch (e) { /* 無痕或被封鎖 */ } }
+  function load(key, dflt) {
+    try { var v = window.localStorage.getItem(key); return v ? JSON.parse(v) : dflt; } catch (e) { return dflt; }
+  }
+  function errText(e) {
+    if (!e) return '未知錯誤';
+    var msg = e.message || String(e);
+    if (e.debugInfo && e.debugInfo.message) msg += '（' + e.debugInfo.message + '）';
+    return msg;
+  }
+
+  // ---------- 編輯器 ----------
+  function currentLatex() {
+    if (texMode || !mf) return $('latex').value;
+    return mf.latex();
+  }
+
+  function setTexMode(on) {
+    texMode = on;
+    $('texNotice').className = on ? '' : 'hidden';
+    $('mathField').style.opacity = on ? '0.35' : '';
+    if (on) $('texBox').setAttribute('open', 'open');
+  }
+
+  function setLatex(latex) {
+    syncing = true;
+    $('latex').value = latex;
+    if (mf) {
+      if (TEX_ONLY.test(latex)) {
+        mf.latex('');
+        setTexMode(true);
+      } else {
+        mf.latex(latex);
+        // MathQuill 讀不懂時會變空白
+        setTexMode(!!latex && !mf.latex());
+      }
+    } else setTexMode(true);
+    syncing = false;
+  }
+
+  function onMathEdit() {
+    if (syncing || texMode) return;
+    $('latex').value = mf.latex();
+  }
+
+  function onLatexInput() {
+    if (!mf) return;
+    var v = $('latex').value;
+    if (TEX_ONLY.test(v)) { setTexMode(true); return; }
+    syncing = true;
+    mf.latex(v);
+    syncing = false;
+    setTexMode(!!v && !mf.latex());
+  }
+
+  function applyPaletteItem(it) {
+    if (it.tex !== undefined) {
+      var ta = $('latex');
+      // 有內容就加在後面，沒有就直接放
+      ta.value = ta.value ? ta.value + ' ' + it.tex : it.tex;
+      setTexMode(true);
+      $('texBox').setAttribute('open', 'open');
+      ta.focus();
+      return;
+    }
+    if (texMode || !mf) {
+      var t = $('latex');
+      t.value += it.w || it.cmd || '';
+      return;
+    }
+    var steps = it.seq || [[it.cmd ? 'cmd' : 'w', it.cmd || it.w]];
+    for (var i = 0; i < steps.length; i++) {
+      if (steps[i][0] === 'cmd') mf.cmd(steps[i][1]);
+      else mf.write(steps[i][1]);
+    }
+    mf.focus();
+  }
+
+  function buildPalette(tab) {
+    var box = $('palette');
+    box.innerHTML = '';
+    var items = PALETTE[tab];
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      if (typeof it === 'string') {
+        var sep = it.lastIndexOf(':');
+        it = { w: it.slice(0, sep) + (it.charAt(sep - 1).match(/[a-z]/i) ? ' ' : ''), l: it.slice(sep + 1) };
+      }
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = it.l;
+      b.title = it.t || it.l;
+      if (it.wide) b.className = 'wide';
+      b.onclick = (function (item) { return function () { applyPaletteItem(item); }; })(it);
+      box.appendChild(b);
+    }
+    var tabs = document.querySelectorAll('.tab');
+    for (i = 0; i < tabs.length; i++) tabs[i].className = 'tab' + (+tabs[i].getAttribute('data-tab') === tab ? ' on' : '');
+  }
+
+  // ---------- 最近使用 ----------
+  function pushHistory(latex) {
+    var h = load(HISTORY_KEY, []);
+    var idx = h.indexOf(latex);
+    if (idx >= 0) h.splice(idx, 1);
+    h.unshift(latex);
+    if (h.length > 12) h.length = 12;
+    store(HISTORY_KEY, h);
+    renderHistory();
+  }
+  function renderHistory() {
+    var h = load(HISTORY_KEY, []), box = $('history');
+    box.innerHTML = '';
+    if (!h.length) {
+      var e = document.createElement('div');
+      e.className = 'empty';
+      e.textContent = '插入過的式子會出現在這裡，點一下就能再用。';
+      box.appendChild(e);
+      return;
+    }
+    for (var i = 0; i < h.length; i++) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = h[i];
+      b.title = h[i];
+      b.onclick = (function (l) { return function () { setLatex(l); if (mf && !texMode) mf.focus(); }; })(h[i]);
+      box.appendChild(b);
+    }
+  }
+
+  function options() {
+    return { noShrink: $('optNoShrink').checked, display: $('optDisplay').checked };
+  }
+
+  // ---------- 複製 ----------
+  function copyText(text) {
+    var ta = $('clip');
+    ta.value = text;
+    ta.focus();
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    if (!ok && window.clipboardData) { // IE11
+      try { ok = window.clipboardData.setData('Text', text); } catch (e2) { ok = false; }
+    }
+    return ok;
+  }
+
+  // ---------- Word ----------
+  function wordInsert(latex) {
+    var opt = options();
+    return Word.run(function (ctx) {
+      var sel = ctx.document.getSelection();
+      sel.load('font/size');
+      return ctx.sync().then(function () {
+        var size = sel.font.size || 12;
+        if (opt.display) {
+          // 獨立一行：直接插入段落（Word 會自己斷行）
+          sel.insertOoxml(Latex2Omml.toFlatOpc(latex, { display: true }), 'Replace');
+          return ctx.sync();
+        }
+        // 行內：佔位文字 → 整段 OOXML 換掉，避免 insertOoxml 把句子切成兩段
+        var marker = sel.insertText(InsertInline.MARKER, 'Replace');
+        var paras = marker.paragraphs;
+        paras.load('items');
+        return ctx.sync().then(function () {
+          var para = paras.items[0];
+          var ox = para.getOoxml();
+          return ctx.sync().then(function () {
+            var doc = parseXml(ox.value);
+            var ok = InsertInline.replaceMarker(doc, InsertInline.MARKER, latex, {
+              fontSize: size, noShrink: opt.noShrink, parseXml: parseXml, cursorMarker: CURSOR
+            });
+            if (!ok) {
+              marker.delete();
+              return ctx.sync().then(function () { throw new Error('找不到插入位置，請再試一次'); });
+            }
+            para.insertOoxml(serialize(doc), 'Replace');
+            return ctx.sync();
+          }).then(function () {
+            // 游標移到方程式後面，方便接著打字
+            var found = ctx.document.body.search(CURSOR, { matchCase: true });
+            found.load('items');
+            return ctx.sync().then(function () {
+              if (found.items.length) {
+                found.items[0].select();
+                found.items[0].delete();
+              }
+              return ctx.sync();
+            });
+          });
+        });
+      });
+    });
+  }
+
+  function wordLoad() {
+    return Word.run(function (ctx) {
+      var sel = ctx.document.getSelection();
+      var ox = sel.getOoxml();
+      return ctx.sync().then(function () {
+        var found = Omml2Latex.fromOoxml(ox.value, parseXml);
+        if (!found.length) throw new Error('選取範圍裡沒有方程式。請拖曳選取整個方程式後再按。');
+        setLatex(found[0].latex);
+        $('optDisplay').checked = found[0].display;
+        return found.length;
+      });
+    });
+  }
+
+  // 只處理選取範圍內「有行內方程式」的段落
+  function wordFixFractions(undo) {
+    return Word.run(function (ctx) {
+      var sel = ctx.document.getSelection();
+      sel.load('font/size');
+      var all = sel.getOoxml();
+      var paras = sel.paragraphs;
+      paras.load('items');
+      return ctx.sync().then(function () {
+        var doc = parseXml(all.value);
+        var W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+        var ps = doc.getElementsByTagNameNS(W, 'p');
+        var targets = [];
+        for (var i = 0; i < ps.length && i < paras.items.length; i++) {
+          if (ps[i].getElementsByTagNameNS(Omml2Latex.M_NS, 'f').length) targets.push(paras.items[i]);
+        }
+        if (!targets.length) return 0;
+        var oxs = targets.map(function (p) { return p.getOoxml(); });
+        return ctx.sync().then(function () {
+          var total = 0;
+          for (var k = 0; k < targets.length; k++) {
+            var d = parseXml(oxs[k].value);
+            var n = FixFrac.apply(d, { fontSize: sel.font.size || 12, undo: undo });
+            if (n) { targets[k].insertOoxml(serialize(d), 'Replace'); total += n; }
+          }
+          return ctx.sync().then(function () { return total; });
+        });
+      });
+    });
+  }
+
+  // ---------- 按鈕 ----------
+  function doInsert() {
+    var latex = currentLatex();
+    if (!latex.replace(/\s/g, '')) { setStatus('請先輸入方程式', 'err'); return; }
+    if (HOST === 'Excel') { doExcelCopy(); return; }
+    if (HOST !== 'Word') {
+      setStatus('目前不是在 Word 裡開啟，只能複製。請在 Word 或 Excel 的增益集中使用。', 'err');
+      return;
+    }
+    $('btnInsert').disabled = true;
+    setStatus('插入中…');
+    wordInsert(latex).then(function () {
+      pushHistory(latex);
+      setStatus('已插入', 'ok');
+    })['catch'](function (e) {
+      setStatus('插入失敗：' + errText(e), 'err');
+    }).then(function () { $('btnInsert').disabled = false; });
+  }
+
+  function doLoad() {
+    if (HOST !== 'Word') { setStatus('讀取方程式只能在 Word 使用', 'err'); return; }
+    setStatus('讀取中…');
+    wordLoad().then(function (n) {
+      setStatus('已載入' + (n > 1 ? '第 1 個（共 ' + n + ' 個）' : '') + '。修改後按「插入」會取代選取的方程式。', 'ok');
+      if (mf && !texMode) mf.focus();
+    })['catch'](function (e) { setStatus(errText(e), 'err'); });
+  }
+
+  function doFix(undo) {
+    setStatus('處理中…');
+    wordFixFractions(undo).then(function (n) {
+      if (!n) setStatus('選取範圍裡沒有行內方程式的分數', 'err');
+      else setStatus((undo ? '已還原 ' : '已放大 ') + n + ' 個分數（可按 Ctrl+Z 復原）', 'ok');
+    })['catch'](function (e) { setStatus('處理失敗：' + errText(e), 'err'); });
+  }
+
+  function doExcelCopy() {
+    var latex = currentLatex();
+    if (!latex.replace(/\s/g, '')) { setStatus('請先輸入方程式', 'err'); return; }
+    if (copyText(Latex2Omml.toUnicodeMath(latex))) {
+      pushHistory(latex);
+      setStatus('已複製。到 Excel 按 Alt+= → Ctrl+V → 按「專業」。', 'ok');
+    } else setStatus('無法自動複製，請到「LaTeX 原始碼」手動複製。', 'err');
+  }
+
+  // ---------- 啟動 ----------
+  function initEditor() {
+    if (window.MathQuill) {
+      mq = MathQuill.getInterface(2);
+      mf = mq.MathField($('mathField'), {
+        spaceBehavesLikeTab: false,
+        leftRightIntoCmdGoes: 'up',
+        restrictMismatchedBrackets: true,
+        sumStartsWithNEquals: true,
+        supSubsRequireOperand: true,
+        charsThatBreakOutOfSupSub: '+-=<>',
+        autoSubscriptNumerals: false,
+        autoCommands: 'pi theta sqrt sum prod int alpha beta gamma delta lambda mu sigma omega phi infty pm times div le ge ne approx angle',
+        autoOperatorNames: 'sin cos tan cot sec csc log ln lim exp max min',
+        handlers: { edit: onMathEdit, enter: doInsert }
+      });
+    } else {
+      // CDN 載不到時，至少還能用 LaTeX 輸入
+      $('mathField').textContent = '（視覺編輯器載入失敗，請用下方 LaTeX 輸入）';
+      setTexMode(true);
+    }
+
+    var tabs = document.querySelectorAll('.tab');
+    for (var i = 0; i < tabs.length; i++) {
+      tabs[i].onclick = function () { buildPalette(+this.getAttribute('data-tab')); };
+    }
+    buildPalette(0);
+
+    var opts = load(OPTIONS_KEY, null);
+    if (opts) { $('optNoShrink').checked = opts.noShrink !== false; $('optDisplay').checked = !!opts.display; }
+    $('optNoShrink').onchange = $('optDisplay').onchange = function () { store(OPTIONS_KEY, options()); };
+
+    var ta = $('latex');
+    ta.oninput = onLatexInput;
+    ta.onkeyup = onLatexInput; // IE11 的 textarea 有時不觸發 input
+    ta.onkeydown = function (e) {
+      if (e.keyCode === 13 && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doInsert(); }
+    };
+
+    $('btnInsert').onclick = doInsert;
+    $('btnLoad').onclick = doLoad;
+    $('btnClear').onclick = function () { setLatex(''); setStatus(''); if (mf) mf.focus(); };
+    $('btnCopyTex').onclick = function () {
+      var ok = copyText(currentLatex());
+      setStatus(ok ? '已複製 LaTeX' : '複製失敗，請手動選取複製', ok ? 'ok' : 'err');
+    };
+    $('btnCopyUm').onclick = function () {
+      var ok = copyText(Latex2Omml.toUnicodeMath(currentLatex()));
+      setStatus(ok ? '已複製線性格式（貼到方程式後按「專業」）' : '複製失敗', ok ? 'ok' : 'err');
+    };
+    $('btnFix').onclick = function () { doFix(false); };
+    $('btnUnfix').onclick = function () { doFix(true); };
+    $('btnExcelCopy').onclick = doExcelCopy;
+    renderHistory();
+    if (mf) mf.focus();
+  }
+
+  function onHost(host) {
+    HOST = host;
+    if (host === 'Word') {
+      $('wordTools').className = 'section';
+    } else if (host === 'Excel') {
+      $('excelTools').className = 'section';
+      $('btnInsert').textContent = '複製到 Excel';
+      $('btnLoad').className = 'hidden';
+      $('optDisplay').parentNode.className = 'hidden';
+      $('optNoShrink').parentNode.className = 'hidden';
+    } else {
+      setStatus('提示：在 Word 或 Excel 的增益集裡開啟才能插入；這裡可以先試用編輯和複製。');
+    }
+  }
+
+  initEditor();
+  if (window.Office && Office.onReady) {
+    Office.onReady(function (info) {
+      var h = info && info.host;
+      onHost(h === Office.HostType.Word ? 'Word' : h === Office.HostType.Excel ? 'Excel' : null);
+    });
+  } else onHost(null);
+}());

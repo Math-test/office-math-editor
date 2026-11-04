@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mathquill/0.10.1/mathquill.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathquill/0.10.1/mathquill.min.js"></script>
+</head><body><span id="f"></span><pre id="out"></pre>
+<script>
+// 檢查 MathQuill 0.10.1 對各指令的支援：設定 latex 後讀回，看有沒有掉內容
+var MQ = MathQuill.getInterface(2), lines = [];
+var cfgOk = 'ok';
+try {
+  MQ.MathField(document.createElement('span'), {
+    autoCommands: 'pi theta sqrt sum prod int alpha beta gamma delta lambda mu sigma omega phi infty pm times div le ge ne approx angle',
+    autoOperatorNames: 'sin cos tan cot sec csc log ln lim exp max min'
+  });
+} catch (e) { cfgOk = 'CONFIG ERROR: ' + e.message; }
+lines.push('config: ' + cfgOk);
+var mf = MQ.MathField(document.getElementById('f'));
+var cases = ['\\frac{1}{2}', '\\sqrt{2}', '\\sqrt[3]{8}', 'x^{2}', 'x_{1}', '\\left(x\\right)', '\\left|x\\right|',
+  '\\overline{AB}', '\\overrightarrow{AB}', '\\vec{v}', '\\overparen{AB}', '\\angle ABC', '\\triangle ABC', '90^{\\circ}', '\\degree',
+  '\\sum_{k=1}^{n}k', '\\int_{0}^{1}x', '\\lim_{x\\to0}x', '\\log_{2}8', '\\ln x', '\\sin\\theta', '\\binom{n}{k}',
+  '\\text{弧長}', '\\le\\ge\\ne\\approx\\equiv\\pm\\times\\div\\cdot\\infty', '\\perp\\parallel\\therefore\\because',
+  '\\in\\notin\\subset\\subseteq\\cup\\cap\\emptyset', '\\Rightarrow\\Leftrightarrow\\to\\sim\\cong\\propto',
+  '\\alpha\\beta\\gamma\\delta\\epsilon\\theta\\lambda\\mu\\pi\\rho\\sigma\\phi\\omega\\Delta\\Sigma\\Omega',
+  "f'(x)", '\\cdots', '\\mathbb{R}', '\\begin{cases}x&1\\end{cases}', '\\begin{matrix}1&2\\end{matrix}', '\\boxed{x}',
+  '\\underline{x}', '\\hat{x}', '\\widehat{AB}', '\\overset{a}{b}', '\\iint x', '\\oint x', '\\nthroot{3}{x}', '\\prod_{i=1}^{n}i',
+  '\\operatorname{gcd}(a,b)', '\\exp x', '\\%', '\\{1,2\\}', '\\left[1,2\\right)'];
+for (var i = 0; i < cases.length; i++) {
+  var res;
+  try { mf.latex(cases[i]); res = mf.latex(); } catch (e) { res = 'ERROR ' + e.message; }
+  lines.push(cases[i] + '  =>  ' + res);
+}
+document.getElementById('out').textContent = lines.join('\n');
+</script></body></html>

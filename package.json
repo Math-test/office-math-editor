@@ -1,0 +1,14 @@
+{
+  "name": "office-math-editor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Word / Excel 數學方程式編輯器（Office 增益集）：行內分數不縮小、插入 Word 原生方程式",
+  "license": "MIT",
+  "scripts": {
+    "test": "node tests/run-tests.js"
+  },
+  "devDependencies": {
+    "@xmldom/xmldom": "^0.9.0",
+    "acorn": "^8.12.0"
+  }
+}

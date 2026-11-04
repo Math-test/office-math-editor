@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>數學方程式編輯器</title>
+  <!-- Office.js 一定要最先載入 -->
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <!-- jQuery 3 與 MathQuill 0.10 都支援 IE11（Office 2016/2019 用的瀏覽器核心） -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mathquill/0.10.1/mathquill.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathquill/0.10.1/mathquill.min.js"></script>
+  <link rel="stylesheet" href="taskpane.css">
+  <script src="latex2omml.js"></script>
+  <script src="omml2latex.js"></script>
+  <script src="fixfrac.js"></script>
+  <script src="insert-inline.js"></script>
+</head>
+<body>
+  <div id="app">
+    <div id="editorBox">
+      <span id="mathField"></span>
+      <div id="texNotice" class="hidden">這個式子含有視覺編輯不支援的結構（矩陣、分段函數等），請直接在下方 LaTeX 修改。</div>
+    </div>
+
+    <div id="tabs">
+      <button type="button" class="tab on" data-tab="0">常用</button>
+      <button type="button" class="tab" data-tab="1">符號</button>
+      <button type="button" class="tab" data-tab="2">希臘</button>
+      <button type="button" class="tab" data-tab="3">函數</button>
+      <button type="button" class="tab" data-tab="4">進階</button>
+    </div>
+    <div id="palette"></div>
+
+    <div id="actions">
+      <button type="button" id="btnInsert" class="primary" title="Enter 也可以插入">插入</button>
+      <button type="button" id="btnLoad" title="先在文件裡選取一個方程式">讀取選取的方程式</button>
+      <button type="button" id="btnClear">清除</button>
+    </div>
+
+    <div id="options">
+      <label><input type="checkbox" id="optNoShrink" checked> 分數不縮小（行內）</label>
+      <label><input type="checkbox" id="optDisplay"> 獨立一行置中</label>
+    </div>
+
+    <div id="status" role="status"></div>
+
+    <details id="texBox">
+      <summary>LaTeX 原始碼</summary>
+      <textarea id="latex" rows="3" spellcheck="false" autocomplete="off"></textarea>
+      <div class="row">
+        <button type="button" id="btnCopyTex">複製 LaTeX</button>
+        <button type="button" id="btnCopyUm" title="貼到 Excel / PowerPoint 的方程式裡">複製線性格式</button>
+      </div>
+    </details>
+
+    <div id="wordTools" class="section hidden">
+      <div class="title">整理既有的方程式</div>
+      <p class="hint">選取文字範圍（全選 Ctrl+A 也可以）後按下，範圍內段落的行內分數會放大成正常大小。</p>
+      <div class="row">
+        <button type="button" id="btnFix">放大選取範圍的分數</button>
+        <button type="button" id="btnUnfix">還原成 Word 預設</button>
+      </div>
+    </div>
+
+    <div id="excelTools" class="section hidden">
+      <div class="title">在 Excel 使用</div>
+      <ol class="hint">
+        <li>按 <b>複製到 Excel</b>。</li>
+        <li>在 Excel 按 <kbd>Alt</kbd>+<kbd>=</kbd>（插入 → 方程式）。</li>
+        <li>按 <kbd>Ctrl</kbd>+<kbd>V</kbd> 貼上。</li>
+        <li>在「方程式」索引標籤按 <b>專業</b>（或在方程式上按右鍵 → 專業）。</li>
+      </ol>
+      <button type="button" id="btnExcelCopy" class="primary">複製到 Excel</button>
+    </div>
+
+    <div id="historyBox" class="section">
+      <div class="title">最近使用</div>
+      <div id="history"></div>
+    </div>
+
+    <textarea id="clip" aria-hidden="true" tabindex="-1"></textarea>
+  </div>
+  <script src="taskpane.js"></script>
+</body>
+</html>
