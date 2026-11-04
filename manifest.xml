@@ -14,18 +14,18 @@
   <DefaultLocale>zh-TW</DefaultLocale>
   <DisplayName DefaultValue="數學方程式編輯器"/>
   <Description DefaultValue="插入可編輯的 Word 方程式，行內分數不縮小；也能讀回既有方程式修改、整份文件的分數一鍵放大。"/>
-  <IconUrl DefaultValue="https://YOUR-GITHUB-NAME.github.io/office-math-editor/assets/icon-32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://YOUR-GITHUB-NAME.github.io/office-math-editor/assets/icon-64.png"/>
-  <SupportUrl DefaultValue="https://YOUR-GITHUB-NAME.github.io/office-math-editor/"/>
+  <IconUrl DefaultValue="https://math-test.github.io/office-math-editor/assets/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://math-test.github.io/office-math-editor/assets/icon-64.png"/>
+  <SupportUrl DefaultValue="https://math-test.github.io/office-math-editor/"/>
   <AppDomains>
-    <AppDomain>https://YOUR-GITHUB-NAME.github.io</AppDomain>
+    <AppDomain>https://math-test.github.io</AppDomain>
   </AppDomains>
   <Hosts>
     <Host Name="Document"/>
     <Host Name="Workbook"/>
   </Hosts>
   <DefaultSettings>
-    <SourceLocation DefaultValue="https://YOUR-GITHUB-NAME.github.io/office-math-editor/src/taskpane.html"/>
+    <SourceLocation DefaultValue="https://math-test.github.io/office-math-editor/src/taskpane.html"/>
   </DefaultSettings>
   <Permissions>ReadWriteDocument</Permissions>
 
@@ -111,14 +111,14 @@
     </Hosts>
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16" DefaultValue="https://YOUR-GITHUB-NAME.github.io/office-math-editor/assets/icon-16.png"/>
-        <bt:Image id="Icon.32" DefaultValue="https://YOUR-GITHUB-NAME.github.io/office-math-editor/assets/icon-32.png"/>
-        <bt:Image id="Icon.80" DefaultValue="https://YOUR-GITHUB-NAME.github.io/office-math-editor/assets/icon-80.png"/>
+        <bt:Image id="Icon.16" DefaultValue="https://math-test.github.io/office-math-editor/assets/icon-16.png"/>
+        <bt:Image id="Icon.32" DefaultValue="https://math-test.github.io/office-math-editor/assets/icon-32.png"/>
+        <bt:Image id="Icon.80" DefaultValue="https://math-test.github.io/office-math-editor/assets/icon-80.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="Commands.Url" DefaultValue="https://YOUR-GITHUB-NAME.github.io/office-math-editor/src/commands.html"/>
-        <bt:Url id="Taskpane.Url" DefaultValue="https://YOUR-GITHUB-NAME.github.io/office-math-editor/src/taskpane.html"/>
-        <bt:Url id="Home.Url" DefaultValue="https://YOUR-GITHUB-NAME.github.io/office-math-editor/"/>
+        <bt:Url id="Commands.Url" DefaultValue="https://math-test.github.io/office-math-editor/src/commands.html"/>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://math-test.github.io/office-math-editor/src/taskpane.html"/>
+        <bt:Url id="Home.Url" DefaultValue="https://math-test.github.io/office-math-editor/"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GetStarted.Title" DefaultValue="數學方程式編輯器已安裝"/>
