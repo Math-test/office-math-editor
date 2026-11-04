@@ -49,7 +49,7 @@
     [ // 符號
       '\\pm:±', '\\mp:∓', '\\times:×', '\\div:÷', '\\cdot:·', '\\le:≤', '\\ge:≥', '\\ne:≠', '\\approx:≈', '\\equiv:≡',
       '\\sim:∼', '\\cong:≅', '\\propto:∝', '\\infty:∞', '\\angle:∠', '\\triangle:△', '^{\\circ}:°', "':′",
-      '\\perp:⊥', '⫽:⫽', '\\parallel:∥', '\\therefore:∴', '\\because:∵', '\\in:∈', '\\notin:∉', '\\subset:⊂',
+      '\\perp:⊥', '⫽:⫽', '\\therefore:∴', '\\because:∵', '\\in:∈', '\\notin:∉', '\\subset:⊂',
       '\\subseteq:⊆', '\\cup:∪', '\\cap:∩', '\\varnothing:∅', '\\Rightarrow:⇒', '\\Leftrightarrow:⇔', '\\to:→',
       '\\cdots:⋯', '\\%:%', 'ℝ:ℝ', 'ℕ:ℕ', 'ℤ:ℤ', 'ℚ:ℚ'
     ],
@@ -253,6 +253,7 @@
   }
 
   function texToProxy(s) {
+    s = s.replace(/\\parallel(?![a-zA-Z])\s*/g, '⫽'); // 編輯器也顯示斜的平行
     var re = /\\(overparen|boxed|overset|underset|lim)(?![a-zA-Z])/g, out = '', last = 0, m;
     while ((m = re.exec(s))) {
       var at = m.index + m[0].length, a, b, rep;

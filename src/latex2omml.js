@@ -33,7 +33,8 @@
     le: '≤', leq: '≤', ge: '≥', geq: '≥', ne: '≠', neq: '≠', approx: '≈', sim: '∼', simeq: '≃',
     cong: '≅', equiv: '≡', propto: '∝', ll: '≪', gg: '≫', leqslant: '⩽', geqslant: '⩾',
     'in': '∈', notin: '∉', ni: '∋', subset: '⊂', supset: '⊃', subseteq: '⊆', supseteq: '⊇',
-    subsetneq: '⊊', perp: '⊥', parallel: '∥', sslash: '⫽', mid: '∣', nmid: '∤',
+    subsetneq: '⊊', perp: '⊥', parallel: '⫽', sslash: '⫽', // 台灣課本的平行是斜的
+    nparallel: '∦', mid: '∣', nmid: '∤',
     // 箭頭
     to: '→', rightarrow: '→', leftarrow: '←', gets: '←', leftrightarrow: '↔', Rightarrow: '⇒',
     Leftarrow: '⇐', Leftrightarrow: '⇔', implies: '⇒', iff: '⇔', mapsto: '↦', uparrow: '↑',
@@ -59,7 +60,7 @@
     overbrace: ['⏞', 'top'], underbrace: ['⏟', 'bot'] };
   var MATRIX_DELIMS = { matrix: ['', ''], pmatrix: ['(', ')'], bmatrix: ['[', ']'], Bmatrix: ['{', '}'],
     vmatrix: ['|', '|'], Vmatrix: ['‖', '‖'], array: ['', ''] };
-  var RELATIONS = '=<>≤≥≠≈≡∼≃≅∝≪≫⩽⩾∈∉∋⊂⊃⊆⊇⊊⊥∥→←↔⇒⇐⇔↦⟶⟹';
+  var RELATIONS = '=<>≤≥≠≈≡∼≃≅∝≪≫⩽⩾∈∉∋⊂⊃⊆⊇⊊⊥∥⫽→←↔⇒⇐⇔↦⟶⟹';
   var DOUBLESTRUCK = { R: 'ℝ', N: 'ℕ', Z: 'ℤ', Q: 'ℚ', C: 'ℂ', P: 'ℙ' };
 
   function isCJK(ch) {
