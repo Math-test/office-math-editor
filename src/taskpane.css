@@ -17,6 +17,13 @@ kbd { border: 1px solid #c9ced6; border-bottom-width: 2px; border-radius: 3px; p
 #mathField { display: block; width: 100%; min-height: 64px; padding: 10px; font-size: 22px;
              border: 1px solid #8aa4c0; border-radius: 6px; background: #ffffff; }
 #mathField.mq-focused { border-color: #1f5f8b; box-shadow: 0 0 0 2px #cfe0ee; }
+/* 弧、方框、上方加字（taskpane.js 的 decorate() 加上 mq-p-* class） */
+.mq-p-arc { display: inline-block; padding: 0.3em 0.05em 0; border-top: 1.5px solid #1f2328;
+            border-radius: 50% 50% 0 0 / 0.45em 0.45em 0 0; }
+.mq-p-box { display: inline-block; padding: 0.05em 0.2em; border: 1px solid #1f2328; }
+.mq-p-ovs { display: inline-block; vertical-align: baseline; text-align: center; }
+.mq-p-ovt { display: block; font-size: 60%; line-height: 1.1; }
+
 /* 格子（矩陣、聯立方程式） */
 #gridBox { margin-top: 6px; padding: 6px 8px 2px; border: 1px solid #c9d6e3; border-radius: 6px; background: #f5f8fb; }
 .gridHead { font-size: 12px; }

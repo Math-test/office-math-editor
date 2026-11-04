@@ -68,11 +68,16 @@
       { l: '矩陣 [ ]', grid: { env: 'bmatrix', rows: 2, cols: 2 }, tex: '\\begin{bmatrix}a & b\\\\c & d\\end{bmatrix}', wide: true },
       { l: '矩陣 ( )', grid: { env: 'pmatrix', rows: 2, cols: 2 }, tex: '\\begin{pmatrix}a & b\\\\c & d\\end{pmatrix}', wide: true },
       { l: '行列式', grid: { env: 'vmatrix', rows: 2, cols: 2 }, tex: '\\begin{vmatrix}a & b\\\\c & d\\end{vmatrix}', wide: true },
-      { l: '弧 AB', tex: '\\overparen{AB}', wide: true },
-      { l: '方框', tex: '\\boxed{x}', wide: true },
+      { l: 'Σ 總和', t: '連加（上下限可以直接打）', cmd: '\\sum', wide: true },
+      { l: '∏ 連乘', cmd: '\\prod', wide: true },
+      // #1f232? 是記號，見下方「弧、方框、上方加字」
+      { l: '弧 ⌒AB', seq: [['w', '\\textcolor{#1f2329}{}'], ['keys', 1]], tex: '\\overparen{AB}', wide: true },
+      { l: '方框', seq: [['w', '\\textcolor{#1f232a}{}'], ['keys', 1]], tex: '\\boxed{x}', wide: true },
+      { l: '上方加字', t: '先打上面的小字，按 → 再打下面（例如等號上面寫「定義」）',
+        seq: [['w', '\\textcolor{#1f232b}{\\textcolor{#1f232c}{}}'], ['keys', 2]],
+        tex: '\\overset{\\text{定義}}{=}', wide: true },
       { l: '組合 (n k)', cmd: '\\binom', wide: true },
-      { l: '集合 {…}', w: '\\left\\{\\right\\}', wide: true },
-      { l: '上方加字', tex: '\\overset{\\text{定義}}{=}', wide: true }
+      { l: '集合 {…}', w: '\\left\\{\\right\\}', wide: true }
     ]
   ];
 
@@ -115,7 +120,7 @@
   // ---------- 編輯器 ----------
   function currentLatex() {
     if (texMode || !mf) return $('latex').value;
-    return mf.latex() + (grid ? gridLatex() : '');
+    return proxyToTex(mf.latex() + (grid ? gridLatex() : ''));
   }
 
   function setTexMode(on) {
@@ -127,6 +132,7 @@
 
   // 放進視覺編輯器（必要時加格子）；放不進去回傳 false
   function loadVisual(latex) {
+    latex = texToProxy(latex);
     var g = splitEnv(latex);
     if (g) {
       if (TEX_ONLY.test(g.prefix) || TEX_ONLY.test(g.rows.join(' '))) g = null;
@@ -149,9 +155,11 @@
     $('latex').value = latex;
     setTexMode(mf ? !loadVisual(latex) : true);
     syncing = false;
+    decorate();
   }
 
   function onMathEdit() {
+    decorate();
     if (syncing || texMode) return;
     $('latex').value = currentLatex();
   }
@@ -162,6 +170,89 @@
     var ok = loadVisual($('latex').value);
     syncing = false;
     setTexMode(!ok);
+    decorate();
+  }
+
+  // ---------- 弧、方框、上方加字 ----------
+  // MathQuill 不支援 \overparen 等。借用 \textcolor{#1f232?}{…} 當記號（跟字的顏色幾乎一樣），
+  // decorate() 依實際顏色加 class 讓 CSS 畫出外觀；進出編輯器時再和真正的 LaTeX 互換
+  // 上方加字是 \textcolor{ovs}{\textcolor{ovt}{上}下}：打完上面按 → 就到下面
+  var PTAG = { arc: '#1f2329', box: '#1f232a', ovs: '#1f232b', ovt: '#1f232c' };
+  var PNAME = { '9': 'arc', a: 'box', b: 'ovs', c: 'ovt' };      // 顏色最後一碼 → 名稱
+  var PBLUE = { 41: 'arc', 42: 'box', 43: 'ovs', 44: 'ovt' };    // rgb 藍色值 → 名稱
+  var PROXY = { arc: '\\overparen', box: '\\boxed' };
+
+  function decorate() {
+    var els = document.querySelectorAll('#editorBox .mq-textcolor');
+    for (var i = 0; i < els.length; i++) {
+      if (els[i].className.indexOf('mq-p-') >= 0) continue;
+      var m = /rgb\(31,\s*35,\s*(\d+)\)/.exec(window.getComputedStyle(els[i]).color);
+      if (m && PBLUE[m[1]]) els[i].className += ' mq-p-' + PBLUE[m[1]];
+    }
+  }
+
+  // s.charAt(i) 是 '{'：回傳 { body, end }，end 在對應的 '}' 後面
+  function readGroup(s, i) {
+    var depth = 0;
+    for (var j = i; j < s.length; j++) {
+      var ch = s.charAt(j);
+      if (ch === '\\') { j++; continue; }
+      if (ch === '{') depth++;
+      else if (ch === '}' && --depth === 0) return { body: s.slice(i + 1, j), end: j + 1 };
+    }
+    return null;
+  }
+
+  // 一個參數：{…}、\指令 或單一字元
+  function readArg(s, i) {
+    while (s.charAt(i) === ' ') i++;
+    var ch = s.charAt(i);
+    if (ch === '{') return readGroup(s, i);
+    if (ch === '\\') {
+      var m = /^\\([a-zA-Z]+|.)/.exec(s.slice(i));
+      return m ? { body: m[0], end: i + m[0].length } : null;
+    }
+    return ch ? { body: ch, end: i + 1 } : null;
+  }
+
+  // 在 s 裡找某個記號的內容
+  function proxyBody(s, name) {
+    var tag = '\\textcolor{' + PTAG[name] + '}', i = s.indexOf(tag);
+    var g = i < 0 ? null : readGroup(s, i + tag.length);
+    return g ? g.body : '';
+  }
+
+  function proxyToTex(s) {
+    var re = /\\textcolor\{#1f232([9a-c])\}/gi, out = '', last = 0, m;
+    while ((m = re.exec(s))) {
+      var g = readGroup(s, m.index + m[0].length), name = PNAME[m[1].toLowerCase()];
+      if (!g) break;
+      out += s.slice(last, m.index);
+      if (name === 'ovs') {
+        // {\textcolor{ovt}{上}下}：ovt 以外的內容都是下面那一行
+        var top = proxyBody(g.body, 'ovt'), tag = '\\textcolor{' + PTAG.ovt + '}{' + top + '}';
+        out += '\\overset{' + proxyToTex(top) + '}{' + proxyToTex(g.body.replace(tag, '')) + '}';
+      } else out += (PROXY[name] || '') + '{' + proxyToTex(g.body) + '}';
+      last = re.lastIndex = g.end;
+    }
+    return out + s.slice(last);
+  }
+
+  function texToProxy(s) {
+    var re = /\\(overparen|boxed|overset)(?![a-zA-Z])/g, out = '', last = 0, m;
+    while ((m = re.exec(s))) {
+      var a = readArg(s, m.index + m[0].length), rep;
+      if (!a) break;
+      if (m[1] === 'overset') {
+        var b = readArg(s, a.end);
+        if (!b) break;
+        rep = '\\textcolor{' + PTAG.ovs + '}{\\textcolor{' + PTAG.ovt + '}{' + texToProxy(a.body) + '}' + texToProxy(b.body) + '}';
+        a = b;
+      } else rep = '\\textcolor{' + (m[1] === 'boxed' ? PTAG.box : PTAG.arc) + '}{' + texToProxy(a.body) + '}';
+      out += s.slice(last, m.index) + rep;
+      last = re.lastIndex = a.end;
+    }
+    return out + s.slice(last);
   }
 
   // ---------- 格子（矩陣、聯立方程式、分段函數）----------
@@ -241,7 +332,7 @@
       spaceBehavesLikeTab: false,
       leftRightIntoCmdGoes: 'up',
       restrictMismatchedBrackets: true,
-      sumStartsWithNEquals: true,
+      sumStartsWithNEquals: false, // 高中多用 k，不要預先放 n=
       supSubsRequireOperand: true,
       charsThatBreakOutOfSupSub: '+-=<>',
       autoSubscriptNumerals: false,
@@ -359,7 +450,7 @@
       focusCell(0, 0);
       return;
     }
-    if (it.tex !== undefined) {
+    if (it.tex !== undefined && (texMode || !mf || !it.seq)) {
       var ta = $('latex');
       // 有內容就加在後面，沒有就直接放
       ta.value = ta.value ? ta.value + ' ' + it.tex : it.tex;
@@ -377,6 +468,7 @@
     var steps = it.seq || [[it.cmd ? 'cmd' : 'w', it.cmd || it.w]];
     for (var i = 0; i < steps.length; i++) {
       if (steps[i][0] === 'cmd') target.cmd(steps[i][1]);
+      else if (steps[i][0] === 'keys') { for (var k = 0; k < steps[i][1]; k++) target.keystroke('Left'); }
       else target.write(steps[i][1]);
     }
     target.focus();
