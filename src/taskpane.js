@@ -4,6 +4,7 @@
 (function () {
   'use strict';
 
+  var VERSION = '2026.11.04-5'; // 顯示在窗格最下面，方便確認是不是讀到舊快取
   var HOST = null; // 'Word' | 'Excel' | null（直接用瀏覽器開）
   var CURSOR = 'EQCURSOR4419'; // 插入後把游標放到方程式後面用
   var HISTORY_KEY = 'ome.history';
@@ -784,6 +785,7 @@
     $('btnUnfix').onclick = function () { doFix(true); };
     $('btnExcelCopy').onclick = doExcelCopy;
     renderHistory();
+    $('version').textContent = '版本 ' + VERSION;
     if (mf) mf.focus();
   }
 

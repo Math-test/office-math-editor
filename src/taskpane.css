@@ -83,6 +83,7 @@ ol.hint { padding-left: 18px; }
 #history button { display: block; width: 100%; margin-bottom: 4px; text-align: left; overflow: hidden;
                   white-space: nowrap; text-overflow: ellipsis; font-family: Consolas, "Courier New", monospace; font-size: 12px; }
 #history .empty { font-size: 12px; color: #8a9099; }
+#version { margin-top: 14px; font-size: 11px; color: #8a9099; text-align: right; }
 
 /* 複製用的隱藏輸入框（不能 display:none，否則無法 select/copy） */
 #clip { position: absolute; left: -9999px; top: 0; width: 10px; height: 10px; opacity: 0; }
