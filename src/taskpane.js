@@ -4,7 +4,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '2026.11.04-5'; // 顯示在窗格最下面，方便確認是不是讀到舊快取
+  var VERSION = '2026.11.06-1'; // 顯示在窗格最下面，方便確認是不是讀到舊快取
   var HOST = null; // 'Word' | 'Excel' | null（直接用瀏覽器開）
   var CURSOR = 'EQCURSOR4419'; // 插入後把游標放到方程式後面用
   var HISTORY_KEY = 'ome.history';
@@ -12,6 +12,8 @@
 
   // lim 的下面可以打字：下方加字的記號，本體是 \lim（見下方「弧、方框、上方加字」）
   var LIM_PROXY = '\\textcolor{#1f232d}{\\lim\\textcolor{#1f232e}{}}';
+  // 同一個字同時有上下標：先開下標、離開、再開上標（MathQuill 會合併成一組），游標回到下標
+  var SUBSUP = [['cmd', '_'], ['key', 'Right'], ['cmd', '^'], ['key', 'Down']];
 
   // MathQuill 0.10 視覺編輯不支援這些（實測），遇到就改用 LaTeX 文字編輯
   var TEX_ONLY = /\\begin|\\overparen|\\underparen|\\boxed|\\hat|\\widehat|\\tilde|\\widetilde|\\dot|\\ddot|\\overset|\\underset|\\stackrel|\\iint|\\iiint|\\mathbb|\\overbrace|\\underbrace|\\genfrac|\\dfrac|\\tfrac|\\cfrac|\\operatorname\{(?!gcd|exp)/;
@@ -25,6 +27,7 @@
       { l: 'ⁿ√', t: 'n 次方根', cmd: '\\nthroot' },
       { l: 'x²', t: '上標（也可以打 ^）', cmd: '^' },
       { l: 'x₁', t: '下標（也可以打 _）', cmd: '_' },
+      { l: 'x₁²', t: '上下標一起（先打下標，按 ↑ 或打 ^ 到上標）', seq: SUBSUP },
       { l: '( )', t: '括號', cmd: '(' },
       { l: '[ ]', t: '中括號', cmd: '[' },
       { l: '|x|', t: '絕對值', cmd: '|' },
@@ -44,7 +47,7 @@
       { l: '∫', t: '積分', cmd: '\\int' },
       { l: 'lim', t: '極限（下面可以打字，打完按 → 離開）', seq: [['w', LIM_PROXY], ['keys', 2]], wide: true },
       { l: 'logₐ', t: '對數', seq: [['w', '\\log'], ['cmd', '_']], wide: true },
-      { l: 'Cⁿₖ', t: '組合數', seq: [['w', 'C'], ['cmd', '_']] },
+      { l: 'Cⁿₖ', t: '組合數（先打下面，按 ↑ 打上面）', seq: [['w', 'C']].concat(SUBSUP) },
       { l: '文字', t: '在方程式裡打中文或一般文字', cmd: '\\text', wide: true }
     ],
     [ // 符號
@@ -500,6 +503,7 @@
     for (var i = 0; i < steps.length; i++) {
       if (steps[i][0] === 'cmd') target.cmd(steps[i][1]);
       else if (steps[i][0] === 'keys') { for (var k = 0; k < steps[i][1]; k++) target.keystroke('Left'); }
+      else if (steps[i][0] === 'key') target.keystroke(steps[i][1]);
       else target.write(steps[i][1]);
     }
     target.focus();
@@ -728,6 +732,18 @@
       }));
       active = mf;
       $('mathField').addEventListener('focusin', function () { active = mf; });
+      // 在下標裡打 ^：MathQuill 會做成「下標的上標」x_{1^2}，改成跳到同一個字的上標 x_1^2（跟 Word 一樣）
+      $('editorBox').addEventListener('keypress', function (e) {
+        var code = e.charCode || e.which;
+        if (code !== 94 || !active) return; // ^
+        var cur = document.querySelector('#editorBox .mq-focused .mq-cursor');
+        if (!cur || !/\bmq-sub\b/.test(cur.parentNode.className)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        active.keystroke('End');
+        active.keystroke('Right');
+        active.cmd('^');
+      }, true);
 
       $('gridAddRow').onclick = function () { addRow(grid.r + 1); };
       $('gridDelRow').onclick = function () { delRow(grid.r); };
